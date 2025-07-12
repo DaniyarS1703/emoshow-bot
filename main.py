@@ -10,29 +10,32 @@ app = Flask(__name__)
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 latest_command = {"text": "Поздравляем с праздником! EMO", "color": "black", "bg": "white", "size": "60"}
 
-# Для отслеживания, ждём ли новый текст
 waiting_text = {}
 
+# 9 уникальных цветов — квадраты для ФОНА
 bg_colors = [
-    ("Белый", "white"),
-    ("Чёрный", "black"),
-    ("Красный", "red"),
-    ("Синий", "blue"),
-    ("Зелёный", "green"),
-    ("Жёлтый", "yellow"),
-    ("Оранжевый", "orange"),
-    ("Фиолетовый", "purple"),
-    ("Серый", "gray"),
-    ("Голубой", "aqua")
+    ("⬜", "white"),
+    ("⬛", "black"),
+    ("🟥", "red"),
+    ("🟦", "blue"),
+    ("🟩", "green"),
+    ("🟨", "yellow"),
+    ("🟧", "orange"),
+    ("🟪", "purple"),
+    ("🟫", "brown")
 ]
 
+# 9 уникальных цветов — шарики для ЦВЕТА ТЕКСТА
 text_colors = [
-    ("Чёрный", "black"),
-    ("Красный", "red"),
-    ("Синий", "blue"),
-    ("Зелёный", "green"),
-    ("Жёлтый", "yellow"),
-    ("Белый", "white")
+    ("⚪", "white"),
+    ("⚫", "black"),
+    ("🔴", "red"),
+    ("🔵", "blue"),
+    ("🟢", "green"),
+    ("🟡", "yellow"),
+    ("🟠", "orange"),
+    ("🟣", "purple"),
+    ("🟤", "brown")
 ]
 
 sizes = [
@@ -48,23 +51,24 @@ def menu_keyboard():
     return markup
 
 def bg_keyboard():
-    markup = InlineKeyboardMarkup(row_width=2)
-    buttons = [InlineKeyboardButton(name, callback_data=f"setbg:{color}") for name, color in bg_colors]
-    markup.add(*buttons)
+    markup = InlineKeyboardMarkup(row_width=3)
+    buttons = [InlineKeyboardButton(emoji, callback_data=f"setbg:{color}") for emoji, color in bg_colors]
+    # Добавляем по 3 в ряд (3x3)
+    for i in range(0, 9, 3):
+        markup.add(*buttons[i:i+3])
     markup.add(InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"))
     markup.add(InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"))
     markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    markup.add(InlineKeyboardButton("Закрыть меню", callback_data="close"))
     return markup
 
 def text_color_keyboard():
-    markup = InlineKeyboardMarkup(row_width=2)
-    buttons = [InlineKeyboardButton(name, callback_data=f"setcolor:{color}") for name, color in text_colors]
-    markup.add(*buttons)
+    markup = InlineKeyboardMarkup(row_width=3)
+    buttons = [InlineKeyboardButton(emoji, callback_data=f"setcolor:{color}") for emoji, color in text_colors]
+    for i in range(0, 9, 3):
+        markup.add(*buttons[i:i+3])
     markup.add(InlineKeyboardButton("Цвет фона", callback_data="show_bg"))
     markup.add(InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"))
     markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    markup.add(InlineKeyboardButton("Закрыть меню", callback_data="close"))
     return markup
 
 def size_keyboard():
@@ -74,7 +78,6 @@ def size_keyboard():
     markup.add(InlineKeyboardButton("Цвет фона", callback_data="show_bg"))
     markup.add(InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"))
     markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    markup.add(InlineKeyboardButton("Закрыть меню", callback_data="close"))
     return markup
 
 @bot.message_handler(commands=['start'])
@@ -89,9 +92,9 @@ def show_main_menu(message):
 def callback_set_bg(call):
     color = call.data.split(":")[1]
     latest_command["bg"] = color
-    bot.answer_callback_query(call.id, text=f"Фон сменён на {color}")
+    bot.answer_callback_query(call.id, text=f"Фон сменён!")
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
-    bot.send_message(call.message.chat.id, f"Фон сменён на {color}", reply_markup=menu_keyboard())
+    bot.send_message(call.message.chat.id, f"Фон сменён!", reply_markup=menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setcolor:"))
 def callback_set_color(call):
@@ -99,7 +102,7 @@ def callback_set_color(call):
     latest_command["color"] = color
     bot.answer_callback_query(call.id, text=f"Цвет текста: {color}")
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
-    bot.send_message(call.message.chat.id, f"Цвет текста: {color}", reply_markup=menu_keyboard())
+    bot.send_message(call.message.chat.id, f"Цвет текста обновлён!", reply_markup=menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setsize:"))
 def callback_set_size(call):
@@ -127,11 +130,6 @@ def show_bg_colors(call):
 @bot.callback_query_handler(func=lambda call: call.data == "show_sizes")
 def show_sizes(call):
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=size_keyboard())
-
-@bot.callback_query_handler(func=lambda call: call.data == "close")
-def close_menu(call):
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
-    bot.send_message(call.message.chat.id, "Меню закрыто.", reply_markup=menu_keyboard())
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
