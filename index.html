@@ -87,20 +87,24 @@
         posX += velX * elapsed;
         posY += velY * elapsed;
 
-        // Проверяем столкновения с боковыми стенками
+        // Столкновение с левой стенкой - текст касается левой границы (posX = 0)
         if (posX <= 0) {
           posX = 0;
           velX = -velX;
-        } else if (posX + textWidth >= containerWidth) {
+        }
+        // Столкновение с правой стенкой - текст касается правой границы (posX + textWidth = containerWidth)
+        else if (posX + textWidth >= containerWidth) {
           posX = containerWidth - textWidth;
           velX = -velX;
         }
 
-        // Проверяем столкновения с верхней и нижней стенками
+        // Столкновение с верхней стенкой - текст касается верхней границы (posY = 0)
         if (posY <= 0) {
           posY = 0;
           velY = -velY;
-        } else if (posY + textHeight >= containerHeight) {
+        }
+        // Столкновение с нижней стенкой - текст касается нижней границы (posY + textHeight = containerHeight)
+        else if (posY + textHeight >= containerHeight) {
           posY = containerHeight - textHeight;
           velY = -velY;
         }
