@@ -29,7 +29,7 @@
       white-space: nowrap;
       will-change: transform;
       opacity: 0;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.3s ease;
       max-width: none;
       padding: 0;
       margin: 0;
@@ -76,7 +76,6 @@
       } else if (direction === "bounce") {
         posX = Math.random() * (containerWidth - textWidth);
         posY = Math.random() * (containerHeight - textHeight);
-        // Начальная скорость под углом 30 градусов вправо-вверх с рандомным знаком
         const angleRad = degToRad(30);
         const signX = Math.random() < 0.5 ? 1 : -1;
         const signY = Math.random() < 0.5 ? 1 : -1;
@@ -104,7 +103,6 @@
         posX += velX * elapsed;
         posY += velY * elapsed;
 
-        // Столкновения с боковыми стенками
         if (posX <= 0) {
           posX = 0;
           velX = -velX;
@@ -113,7 +111,6 @@
           velX = -velX;
         }
 
-        // Столкновения с верхней и нижней стенками
         if (posY <= 0) {
           posY = 0;
           velY = -velY;
@@ -124,58 +121,71 @@
       }
 
       marquee.style.transform = `translate(${posX}px, ${posY}px)`;
-
       requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
-      // Если изменился текст или направление, обновляем стили и позицию
       const textChanged = (data.text !== lastText);
       const directionChanged = (data.direction !== lastDirection);
 
+      // Если текст изменился — плавно меняем opacity для плавного перехода
       if (textChanged) {
-        marquee.textContent = data.text;
-      }
-      marquee.style.color = data.color;
-      document.body.style.backgroundColor = data.bg;
-      marquee.style.fontSize = data.size + "px";
+        marquee.style.opacity = 0;
+        setTimeout(() => {
+          marquee.textContent = data.text;
+          marquee.style.color = data.color;
+          document.body.style.backgroundColor = data.bg;
+          marquee.style.fontSize = data.size + "px";
 
-      const minSpeedPx = 100;
-      const maxSpeedPx = 600;
-      let speed = Number(data.speed);
-      speed = Math.min(Math.max(speed, 1), 10);
-      speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
+          const minSpeedPx = 100;
+          const maxSpeedPx = 600;
+          let speed = Number(data.speed);
+          speed = Math.min(Math.max(speed, 1), 10);
+          speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
-      // Устанавливаем новое направление
-      direction = data.direction || "left";
+          direction = data.direction || "left";
 
-      // Сброс стилей для точных измерений
-      marquee.style.maxWidth = "none";
-      marquee.style.whiteSpace = "nowrap";
+          marquee.style.maxWidth = "none";
+          marquee.style.whiteSpace = "nowrap";
 
-      // Обновим размеры после применения текста и стилей (через setTimeout для рендеринга)
-      setTimeout(() => {
-        containerWidth = marquee.parentElement.offsetWidth;
-        containerHeight = marquee.parentElement.offsetHeight;
-        textWidth = marquee.offsetWidth;
-        textHeight = marquee.offsetHeight;
-
-        if (direction === "bounce" && textWidth > containerWidth * 0.75) {
-          marquee.style.maxWidth = "75vw";
-          marquee.style.whiteSpace = "normal";
           setTimeout(() => {
+            containerWidth = marquee.parentElement.offsetWidth;
+            containerHeight = marquee.parentElement.offsetHeight;
             textWidth = marquee.offsetWidth;
             textHeight = marquee.offsetHeight;
-          }, 10);
-        }
 
-        // При изменении текста или направления — заново инициализируем позицию и скорость
-        if (textChanged || directionChanged) {
+            if (direction === "bounce" && textWidth > containerWidth * 0.75) {
+              marquee.style.maxWidth = "75vw";
+              marquee.style.whiteSpace = "normal";
+              setTimeout(() => {
+                textWidth = marquee.offsetWidth;
+                textHeight = marquee.offsetHeight;
+              }, 10);
+            }
+
+            if (textChanged || directionChanged) {
+              initPositionAndVelocity();
+            }
+            marquee.style.opacity = 1;
+          }, 50);
+        }, 300);
+      } else {
+        // Если текст не изменился, просто обновляем цвета и скорость без сброса позиции
+        marquee.style.color = data.color;
+        document.body.style.backgroundColor = data.bg;
+        marquee.style.fontSize = data.size + "px";
+
+        const minSpeedPx = 100;
+        const maxSpeedPx = 600;
+        let speed = Number(data.speed);
+        speed = Math.min(Math.max(speed, 1), 10);
+        speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
+
+        if (directionChanged) {
+          direction = data.direction || "left";
           initPositionAndVelocity();
         }
-      }, 10);
-
-      marquee.style.opacity = 1;
+      }
 
       lastText = data.text;
       lastDirection = data.direction;
