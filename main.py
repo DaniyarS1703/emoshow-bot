@@ -63,8 +63,12 @@ def menu_keyboard():
     return markup
 
 def bg_keyboard():
+    current_bg = latest_command.get("bg", "white")
     markup = InlineKeyboardMarkup(row_width=3)
-    buttons = [InlineKeyboardButton(emoji, callback_data=f"setbg:{color}") for emoji, color in bg_colors]
+    buttons = []
+    for emoji, color in bg_colors:
+        label = emoji + (" ✅" if color == current_bg else "")
+        buttons.append(InlineKeyboardButton(label, callback_data=f"setbg:{color}"))
     for i in range(0, 9, 3):
         markup.add(*buttons[i:i+3])
     markup.add(
@@ -79,8 +83,12 @@ def bg_keyboard():
     return markup
 
 def text_color_keyboard():
+    current_color = latest_command.get("color", "black")
     markup = InlineKeyboardMarkup(row_width=3)
-    buttons = [InlineKeyboardButton(emoji, callback_data=f"setcolor:{color}") for emoji, color in text_colors]
+    buttons = []
+    for emoji, color in text_colors:
+        label = emoji + (" ✅" if color == current_color else "")
+        buttons.append(InlineKeyboardButton(label, callback_data=f"setcolor:{color}"))
     for i in range(0, 9, 3):
         markup.add(*buttons[i:i+3])
     markup.add(
@@ -95,8 +103,12 @@ def text_color_keyboard():
     return markup
 
 def size_keyboard():
+    current_size = latest_command.get("size", "100")
     markup = InlineKeyboardMarkup(row_width=2)
-    buttons = [InlineKeyboardButton(name, callback_data=f"setsize:{size}") for name, size in sizes]
+    buttons = []
+    for name, size in sizes:
+        label = name + (" ✅" if size == current_size else "")
+        buttons.append(InlineKeyboardButton(label, callback_data=f"setsize:{size}"))
     markup.add(*buttons)
     markup.add(
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
@@ -110,14 +122,22 @@ def size_keyboard():
     return markup
 
 def speed_keyboard():
+    current_speed = latest_command.get("speed", "3")
     markup = InlineKeyboardMarkup(row_width=5)
-    buttons = [InlineKeyboardButton(name, callback_data=f"setspeed:{value}") for name, value in speed_options]
+    buttons = []
+    for name, value in speed_options:
+        label = name + (" ✅" if value == current_speed else "")
+        buttons.append(InlineKeyboardButton(label, callback_data=f"setspeed:{value}"))
     markup.add(*buttons)
     return markup
 
 def direction_keyboard():
+    current_direction = latest_command.get("direction", "left")
     markup = InlineKeyboardMarkup(row_width=2)
-    buttons = [InlineKeyboardButton(name, callback_data=f"setdirection:{value}") for name, value in direction_options]
+    buttons = []
+    for name, value in direction_options:
+        label = name + (" ✅" if value == current_direction else "")
+        buttons.append(InlineKeyboardButton(label, callback_data=f"setdirection:{value}"))
     markup.add(*buttons)
     return markup
 
