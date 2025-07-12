@@ -128,6 +128,12 @@
       const textChanged = (data.text !== lastText);
       const directionChanged = (data.direction !== lastDirection);
 
+      if (directionChanged) {
+        // При смене режима обновляем страницу для сброса анимации
+        location.reload();
+        return; // дальше не продолжаем
+      }
+
       // Если текст изменился — плавно меняем opacity для плавного перехода
       if (textChanged) {
         marquee.style.opacity = 0;
@@ -163,9 +169,7 @@
               }, 10);
             }
 
-            if (textChanged || directionChanged) {
-              initPositionAndVelocity();
-            }
+            initPositionAndVelocity();
             marquee.style.opacity = 1;
           }, 50);
         }, 300);
@@ -180,11 +184,6 @@
         let speed = Number(data.speed);
         speed = Math.min(Math.max(speed, 1), 10);
         speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
-
-        if (directionChanged) {
-          direction = data.direction || "left";
-          initPositionAndVelocity();
-        }
       }
 
       lastText = data.text;
