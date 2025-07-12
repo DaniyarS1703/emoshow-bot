@@ -41,6 +41,7 @@ def safe_edit_reply_markup(chat_id, message_id, reply_markup):
         bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=reply_markup)
     except ApiTelegramException as e:
         if "message is not modified" in str(e):
+            # Игнорируем эту ошибку, т.к. повторное обновление не нужно
             pass
         else:
             raise
@@ -59,9 +60,7 @@ def bg_keyboard():
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"),
     )
-    markup.add(
-        InlineKeyboardButton("Изменить текст", callback_data="edit_text"),
-    )
+    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
     markup.add(
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
@@ -77,9 +76,7 @@ def text_color_keyboard():
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"),
     )
-    markup.add(
-        InlineKeyboardButton("Изменить текст", callback_data="edit_text"),
-    )
+    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
     markup.add(
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
@@ -94,9 +91,7 @@ def size_keyboard():
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
     )
-    markup.add(
-        InlineKeyboardButton("Изменить текст", callback_data="edit_text"),
-    )
+    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
     markup.add(
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
@@ -118,16 +113,19 @@ def direction_keyboard():
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    print(f"Start command from user {message.from_user.id}")
     bot.send_message(message.chat.id, "Добро пожаловать! Управляй бегущей строкой кнопками 🎨 Меню ниже.", reply_markup=menu_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == "🎨 Меню")
 def show_main_menu(message):
+    print(f"Menu requested by user {message.from_user.id}")
     bot.send_message(message.chat.id, "Выберите настройку:", reply_markup=bg_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setbg:"))
 def callback_set_bg(call):
     color = call.data.split(":")[1]
     latest_command["bg"] = color
+    print(f"Background changed to: {color} by user {call.from_user.id}")
     bot.answer_callback_query(call.id, text=f"Фон сменён!")
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Фон сменён!", reply_markup=menu_keyboard())
@@ -136,6 +134,7 @@ def callback_set_bg(call):
 def callback_set_color(call):
     color = call.data.split(":")[1]
     latest_command["color"] = color
+    print(f"Text color changed to: {color} by user {call.from_user.id}")
     bot.answer_callback_query(call.id, text=f"Цвет текста: {color}")
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Цвет текста обновлён!", reply_markup=menu_keyboard())
@@ -144,6 +143,7 @@ def callback_set_color(call):
 def callback_set_size(call):
     size = call.data.split(":")[1]
     latest_command["size"] = size
+    print(f"Font size changed to: {size} by user {call.from_user.id}")
     bot.answer_callback_query(call.id, text=f"Размер шрифта: {size}")
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Размер шрифта: {size}", reply_markup=menu_keyboard())
@@ -151,6 +151,7 @@ def callback_set_size(call):
 @bot.callback_query_handler(func=lambda call: call.data == "edit_text")
 def callback_edit_text(call):
     waiting_text[call.from_user.id] = True
+    print(f"User {call.from_user.id} is editing text")
     bot.answer_callback_query(call.id, text="Введи новый текст")
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, "Отправь новый текст для бегущей строки:")
@@ -179,6 +180,7 @@ def show_direction(call):
 def callback_set_speed(call):
     speed = call.data.split(":")[1]
     latest_command["speed"] = speed
+    print(f"Speed changed to: {speed} by user {call.from_user.id}")
     bot.answer_callback_query(call.id, text=f"Скорость: {speed}")
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Скорость движения: {speed}", reply_markup=menu_keyboard())
@@ -187,6 +189,7 @@ def callback_set_speed(call):
 def callback_set_direction(call):
     direction = call.data.split(":")[1]
     latest_command["direction"] = direction
+    print(f"Direction changed to: {direction} by user {call.from_user.id}")
     bot.answer_callback_query(call.id, text=f"Направление: {('Влево' if direction=='left' else 'Вправо')}")
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Направление: {('⬅️ Влево' if direction=='left' else '➡️ Вправо')}", reply_markup=menu_keyboard())
@@ -198,21 +201,26 @@ def handle_all(message):
         latest_command["text"] = message.text.strip()
         waiting_text[message.from_user.id] = False
         bot.reply_to(message, "Текст обновлён!")
+        print(f"Text updated to: {latest_command['text']} by user {message.from_user.id}")
     else:
         text = message.text.strip()
         if text.upper().startswith("ТЕКСТ:"):
             latest_command["text"] = text[6:].strip()
             bot.reply_to(message, "Текст обновлён!")
+            print(f"Text updated to: {latest_command['text']} by user {message.from_user.id}")
         elif text.upper().startswith("ЦВЕТ:"):
             latest_command["color"] = text[5:].strip()
             bot.reply_to(message, "Цвет текста обновлён!")
+            print(f"Color updated to: {latest_command['color']} by user {message.from_user.id}")
         elif text.upper().startswith("ФОН:"):
             latest_command["bg"] = text[4:].strip()
             bot.reply_to(message, "Цвет фона обновлён!")
+            print(f"Background updated to: {latest_command['bg']} by user {message.from_user.id}")
         elif text.upper().startswith("РАЗМЕР:"):
             try:
                 latest_command["size"] = str(int(text[7:].strip()))
                 bot.reply_to(message, "Размер шрифта обновлён!")
+                print(f"Size updated to: {latest_command['size']} by user {message.from_user.id}")
             except Exception:
                 bot.reply_to(message, "Ошибка: размер — только число.")
         else:
