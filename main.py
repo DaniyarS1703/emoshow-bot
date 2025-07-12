@@ -18,7 +18,7 @@ latest_command = {
     "color": "black",
     "bg": "white",
     "size": "100",
-    "direction": "left",
+    "direction": "left",  # left или bounce
     "speed": "3"
 }
 waiting_text = {}
