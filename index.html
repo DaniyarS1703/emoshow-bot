@@ -62,6 +62,7 @@
 
     let lastText = "";
     let lastDirection = "";
+    let lastSpeed = "";
 
     function degToRad(deg) {
       return deg * Math.PI / 180;
@@ -138,6 +139,13 @@
     function updateMarquee(data) {
       const textChanged = (data.text !== lastText);
       const directionChanged = (data.direction !== lastDirection);
+      const speedChanged = (data.speed !== lastSpeed);
+
+      // Если скорость изменилась — обновляем страницу для плавного сброса анимации
+      if (speedChanged) {
+        location.reload();
+        return;
+      }
 
       if (textChanged || directionChanged) {
         marquee.style.opacity = 0;
@@ -162,7 +170,6 @@
             containerWidth = marquee.parentElement.offsetWidth;
             containerHeight = marquee.parentElement.offsetHeight;
 
-            // Обновляем размеры через getBoundingClientRect для точности
             const rect = marquee.getBoundingClientRect();
             textWidth = rect.width;
             textHeight = rect.height;
@@ -200,6 +207,7 @@
 
       lastText = data.text;
       lastDirection = data.direction;
+      lastSpeed = data.speed;
     }
 
     async function fetchData() {
