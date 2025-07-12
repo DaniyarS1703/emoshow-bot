@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>EMOSHOW — Бегущая строка fullscreen</title>
+  <style>
+    html, body {
+      margin: 0; 
+      padding: 0; 
+      height: 100%;
+      overflow: hidden;
+      background-color: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 60px;
+      position: relative;
+      user-select: none;
+    }
+    #marquee-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #marquee {
+      position: absolute;
+      white-space: nowrap;
+      will-change: transform;
+      color: inherit;
+      font-size: inherit;
+      top: 50%;
+      transform: translateY(-50%);
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      animation-name: marquee-left;
+      animation-duration: 15s;
+      left: 100%;
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+    @keyframes marquee-left {
+      0%   { transform: translateX(0) translateY(-50%); }
+      100% { transform: translateX(-100%) translateY(-50%); }
+    }
+    @keyframes marquee-right {
+      0%   { transform: translateX(-100%) translateY(-50%); }
+      100% { transform: translateX(0) translateY(-50%); }
+    }
+  </style>
+</head>
+<body>
+  <div id="marquee-container">
+    <div id="marquee">Загрузка...</div>
+  </div>
+
+  <script>
+    const API_URL = "/api/latest?apikey=77777";
+
+    async function fetchData() {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Ошибка сети");
+        const data = await response.json();
+        updateMarquee(data);
+      } catch (error) {
+        console.error("Ошибка при получении данных:", error);
+      }
+    }
+
+    function updateMarquee(data) {
+      const marquee = document.getElementById("marquee");
+      marquee.textContent = data.text;
+      marquee.style.color = data.color;
+      document.body.style.backgroundColor = data.bg;
+      marquee.style.fontSize = data.size + "px";
+
+      marquee.style.animation = 'none';
+
+      const speed = Number(data.speed);
+      const clampedSpeed = Math.min(Math.max(speed, 1), 10);
+      const maxDuration = 25;
+      const minDuration = 3;
+      const duration = maxDuration - (clampedSpeed - 1) * ((maxDuration - minDuration) / 9);
+
+      const animationName = data.direction === "left" ? "marquee-left" : "marquee-right";
+
+      marquee.style.animation = `${animationName} ${duration.toFixed(2)}s linear infinite`;
+
+      // Плавно показать текст после загрузки
+      marquee.style.opacity = 1;
+    }
+
+    setInterval(fetchData, 5000);
+    fetchData();
+  </script>
+</body>
+</html>

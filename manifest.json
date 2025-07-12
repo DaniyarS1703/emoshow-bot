@@ -1,0 +1,16 @@
+{
+  "name": "EMOSHOW",
+  "short_name": "EMOSHOW",
+  "start_url": "marquee.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "https://emojicdn.elk.sh/🎉",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

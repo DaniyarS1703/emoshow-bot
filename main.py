@@ -1,16 +1,14 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from flask_cors import CORS
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "ТВОЙ_ТОКЕН_ОТ_BOTFATHER")
 API_KEY = os.environ.get("API_KEY", "77777")
 
 app = Flask(__name__)
-CORS(app)  # Разрешаем CORS-запросы
-
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
+
 latest_command = {
     "text": "Поздравляем с праздником! EMO",
     "color": "black",
@@ -21,52 +19,18 @@ latest_command = {
 }
 waiting_text = {}
 
-# Цвета и клавиатуры
-
+# Цвета и настройки клавиатуры
 bg_colors = [
-    ("⬜", "white"),
-    ("⬛", "black"),
-    ("🟥", "red"),
-    ("🟦", "blue"),
-    ("🟩", "green"),
-    ("🟨", "yellow"),
-    ("🟧", "orange"),
-    ("🟪", "purple"),
-    ("🟫", "brown")
+    ("⬜", "white"), ("⬛", "black"), ("🟥", "red"), ("🟦", "blue"),
+    ("🟩", "green"), ("🟨", "yellow"), ("🟧", "orange"), ("🟪", "purple"), ("🟫", "brown")
 ]
-
 text_colors = [
-    ("⚪", "white"),
-    ("⚫", "black"),
-    ("🔴", "red"),
-    ("🔵", "blue"),
-    ("🟢", "green"),
-    ("🟡", "yellow"),
-    ("🟠", "orange"),
-    ("🟣", "purple"),
-    ("🟤", "brown")
+    ("⚪", "white"), ("⚫", "black"), ("🔴", "red"), ("🔵", "blue"),
+    ("🟢", "green"), ("🟡", "yellow"), ("🟠", "orange"), ("🟣", "purple"), ("🟤", "brown")
 ]
-
-sizes = [
-    ("60", "60"),
-    ("80", "80"),
-    ("100", "100"),
-    ("120", "120")
-]
-
-speed_options = [
-    ("🐢 1", "1"),
-    ("2", "2"),
-    ("3", "3"),
-    ("4", "4"),
-    ("5", "5"),
-    ("⚡️ 6", "6")
-]
-
-direction_options = [
-    ("⬅️", "left"),
-    ("➡️", "right")
-]
+sizes = [("60", "60"), ("80", "80"), ("100", "100"), ("120", "120")]
+speed_options = [("🐢 1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"), ("⚡️ 6", "6")]
+direction_options = [("⬅️", "left"), ("➡️", "right")]
 
 def menu_keyboard():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -250,7 +214,7 @@ def api_latest():
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 if __name__ == '__main__':
     import threading
