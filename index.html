@@ -12,7 +12,7 @@
       background-color: black;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       color: white;
       font-size: 60px;
       position: relative;
@@ -31,22 +31,21 @@
       color: inherit;
       font-size: inherit;
       top: 50%;
-      transform: translateY(-50%);
+      transform: translateY(-50%) translateX(100%);
       animation-timing-function: linear;
       animation-iteration-count: infinite;
       animation-name: marquee-left;
       animation-duration: 15s;
-      left: 100%;
       opacity: 0;
       transition: opacity 0.7s ease;
     }
     @keyframes marquee-left {
-      0%   { transform: translateX(0) translateY(-50%); }
-      100% { transform: translateX(-100%) translateY(-50%); }
+      0%   { transform: translateX(100%) translateY(-50%); }
+      100% { transform: translateX(calc(-100% - var(--marquee-width))) translateY(-50%); }
     }
     @keyframes marquee-right {
-      0%   { transform: translateX(-100%) translateY(-50%); }
-      100% { transform: translateX(0) translateY(-50%); }
+      0%   { transform: translateX(calc(-100% - var(--marquee-width))) translateY(-50%); }
+      100% { transform: translateX(100%) translateY(-50%); }
     }
   </style>
 </head>
@@ -57,6 +56,40 @@
 
   <script>
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
+    const marquee = document.getElementById("marquee");
+
+    // Функция для вычисления длительности анимации по скорости (1-10)
+    function getAnimationDuration(speed) {
+      const maxDuration = 30; // сек (медленно)
+      const minDuration = 5;  // сек (быстро)
+      speed = Math.min(Math.max(speed, 1), 10);
+      return maxDuration - (speed - 1) * ((maxDuration - minDuration) / 9);
+    }
+
+    // Обновление текста бегущей строки с корректным уходом за пределы экрана
+    function updateMarquee(data) {
+      marquee.textContent = data.text;
+      marquee.style.color = data.color;
+      document.body.style.backgroundColor = data.bg;
+      marquee.style.fontSize = data.size + "px";
+
+      // Чтобы анимация учитывала ширину текста
+      requestAnimationFrame(() => {
+        const width = marquee.offsetWidth + 'px';
+        marquee.style.setProperty('--marquee-width', width);
+
+        const duration = getAnimationDuration(Number(data.speed));
+        marquee.style.animationDuration = duration + 's';
+
+        const animationName = data.direction === "left" ? "marquee-left" : "marquee-right";
+        marquee.style.animationName = "none"; // сброс анимации для перезапуска
+        void marquee.offsetWidth; // триггер reflow
+        marquee.style.animationName = animationName;
+
+        // Показать текст плавно
+        marquee.style.opacity = 1;
+      });
+    }
 
     async function fetchData() {
       try {
@@ -69,31 +102,8 @@
       }
     }
 
-    function updateMarquee(data) {
-      const marquee = document.getElementById("marquee");
-      marquee.textContent = data.text;
-      marquee.style.color = data.color;
-      document.body.style.backgroundColor = data.bg;
-      marquee.style.fontSize = data.size + "px";
-
-      marquee.style.animation = 'none';
-
-      const speed = Number(data.speed);
-      const clampedSpeed = Math.min(Math.max(speed, 1), 10);
-      const maxDuration = 25;
-      const minDuration = 3;
-      const duration = maxDuration - (clampedSpeed - 1) * ((maxDuration - minDuration) / 9);
-
-      const animationName = data.direction === "left" ? "marquee-left" : "marquee-right";
-
-      marquee.style.animation = `${animationName} ${duration.toFixed(2)}s linear infinite`;
-
-      // Плавно показать текст после загрузки
-      marquee.style.opacity = 1;
-    }
-
-    setInterval(fetchData, 5000);
-    fetchData();
+    setInterval(fetchData, 5000); // обновлять каждые 5 сек
+    fetchData(); // первый вызов
   </script>
 </body>
 </html>
