@@ -4,7 +4,7 @@ import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from flask_cors import CORS
 
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "ТВОЙ_ТОКЕН_ОТ_BOTFATHER")
 API_KEY = os.environ.get("API_KEY", "77777")
 
 app = Flask(__name__)
@@ -21,7 +21,7 @@ latest_command = {
 }
 waiting_text = {}
 
-# Цвета и клавиатуры (оставляем без изменений)
+# Цвета и клавиатуры
 
 bg_colors = [
     ("⬜", "white"),
