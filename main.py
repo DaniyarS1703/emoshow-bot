@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-# ====== НАСТРОЙКИ ======
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "ТВОЙ_ТОКЕН_ОТ_BOTFATHER")
 API_KEY = os.environ.get("API_KEY", "секретный_ключ_для_apk")
 
@@ -11,7 +10,9 @@ app = Flask(__name__)
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 latest_command = {"text": "Поздравляем с праздником! EMO", "color": "black", "bg": "white", "size": "60"}
 
-# ====== КНОПКИ ======
+# Для отслеживания, ждём ли новый текст
+waiting_text = {}
+
 bg_colors = [
     ("Белый", "white"),
     ("Чёрный", "black"),
@@ -52,6 +53,7 @@ def bg_keyboard():
     markup.add(*buttons)
     markup.add(InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"))
     markup.add(InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"))
+    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
     markup.add(InlineKeyboardButton("Закрыть меню", callback_data="close"))
     return markup
 
@@ -61,6 +63,7 @@ def text_color_keyboard():
     markup.add(*buttons)
     markup.add(InlineKeyboardButton("Цвет фона", callback_data="show_bg"))
     markup.add(InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"))
+    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
     markup.add(InlineKeyboardButton("Закрыть меню", callback_data="close"))
     return markup
 
@@ -70,10 +73,10 @@ def size_keyboard():
     markup.add(*buttons)
     markup.add(InlineKeyboardButton("Цвет фона", callback_data="show_bg"))
     markup.add(InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"))
+    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
     markup.add(InlineKeyboardButton("Закрыть меню", callback_data="close"))
     return markup
 
-# ====== ОБРАБОТЧИКИ ======
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(message.chat.id, "Добро пожаловать! Управляй бегущей строкой кнопками 🎨 Меню ниже.", reply_markup=menu_keyboard())
@@ -106,6 +109,13 @@ def callback_set_size(call):
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
     bot.send_message(call.message.chat.id, f"Размер шрифта: {size}", reply_markup=menu_keyboard())
 
+@bot.callback_query_handler(func=lambda call: call.data == "edit_text")
+def callback_edit_text(call):
+    waiting_text[call.from_user.id] = True
+    bot.answer_callback_query(call.id, text="Введи новый текст")
+    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    bot.send_message(call.message.chat.id, "Отправь новый текст для бегущей строки:")
+
 @bot.callback_query_handler(func=lambda call: call.data == "show_text_colors")
 def show_text_colors(call):
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=text_color_keyboard())
@@ -126,25 +136,29 @@ def close_menu(call):
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
     global latest_command
-    text = message.text.strip()
-
-    if text.upper().startswith("ТЕКСТ:"):
-        latest_command["text"] = text[6:].strip()
+    if waiting_text.get(message.from_user.id, False):
+        latest_command["text"] = message.text.strip()
+        waiting_text[message.from_user.id] = False
         bot.reply_to(message, "Текст обновлён!")
-    elif text.upper().startswith("ЦВЕТ:"):
-        latest_command["color"] = text[5:].strip()
-        bot.reply_to(message, "Цвет текста обновлён!")
-    elif text.upper().startswith("ФОН:"):
-        latest_command["bg"] = text[4:].strip()
-        bot.reply_to(message, "Цвет фона обновлён!")
-    elif text.upper().startswith("РАЗМЕР:"):
-        try:
-            latest_command["size"] = str(int(text[7:].strip()))
-            bot.reply_to(message, "Размер шрифта обновлён!")
-        except Exception:
-            bot.reply_to(message, "Ошибка: размер — только число.")
     else:
-        bot.reply_to(message, "Используй кнопки 🎨 Меню ниже или команды:\nТЕКСТ: ...\nЦВЕТ: ...\nФОН: ...\nРАЗМЕР: ...")
+        text = message.text.strip()
+        if text.upper().startswith("ТЕКСТ:"):
+            latest_command["text"] = text[6:].strip()
+            bot.reply_to(message, "Текст обновлён!")
+        elif text.upper().startswith("ЦВЕТ:"):
+            latest_command["color"] = text[5:].strip()
+            bot.reply_to(message, "Цвет текста обновлён!")
+        elif text.upper().startswith("ФОН:"):
+            latest_command["bg"] = text[4:].strip()
+            bot.reply_to(message, "Цвет фона обновлён!")
+        elif text.upper().startswith("РАЗМЕР:"):
+            try:
+                latest_command["size"] = str(int(text[7:].strip()))
+                bot.reply_to(message, "Размер шрифта обновлён!")
+            except Exception:
+                bot.reply_to(message, "Ошибка: размер — только число.")
+        else:
+            bot.reply_to(message, "Используй кнопки 🎨 Меню ниже или команды:\nТЕКСТ: ...\nЦВЕТ: ...\nФОН: ...\nРАЗМЕР: ...")
 
 @app.route('/api/latest', methods=['GET'])
 def api_latest():
