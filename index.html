@@ -5,9 +5,7 @@
   <title>EMOSHOW — Классическая бегущая строка fullscreen</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
+      margin: 0; padding: 0; height: 100%;
       overflow: hidden;
       background-color: black;
       color: white;
@@ -15,7 +13,6 @@
       user-select: none;
       display: flex;
       align-items: center;
-      justify-content: flex-start;
       position: relative;
     }
     #marquee-container {
@@ -26,78 +23,66 @@
       white-space: nowrap;
     }
     #marquee {
-      display: inline-block;
-      white-space: nowrap;
-      will-change: transform;
       position: absolute;
       top: 50%;
-      left: 0;
-      transform: translateY(-50%);
-    }
-    #marquee span {
-      display: inline-block;
-      padding-right: 100px; /* расстояние между повторениями */
+      white-space: nowrap;
+      transform: translateY(-50%) translateX(100%);
+      will-change: transform;
     }
   </style>
 </head>
 <body>
   <div id="marquee-container">
-    <div id="marquee">
-      <span>Загрузка...</span><span>Загрузка...</span>
-    </div>
+    <div id="marquee">Загрузка...</div>
   </div>
 
   <script>
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
-    let animationId;
 
-    function getAnimationDuration(speed) {
-      const maxDuration = 30; // медленно (сек)
-      const minDuration = 5;  // быстро (сек)
-      speed = Math.min(Math.max(speed, 1), 10);
-      return maxDuration - (speed - 1) * ((maxDuration - minDuration) / 9);
-    }
+    // Скорость: пикселей в секунду (будем пересчитывать из speed из API)
+    let speedPxPerSec = 100; 
 
-    function startAnimation(duration) {
-      let start = null;
-      const containerWidth = marquee.parentElement.offsetWidth;
-      const textWidth = marquee.offsetWidth / 2; // у нас 2 копии текста
+    let posX; // текущая позиция текста
 
-      function step(timestamp) {
-        if (!start) start = timestamp;
-        let elapsed = (timestamp - start) / 1000; // сек
-        let distance = (elapsed / duration) * (textWidth + containerWidth);
+    // Обновить позицию по времени
+    function animate(timestamp) {
+      if (!animate.last) animate.last = timestamp;
+      if (posX === undefined) {
+        posX = marquee.parentElement.offsetWidth; // начинаем справа вне экрана
+      }
+      const elapsed = (timestamp - animate.last) / 1000; // сек
+      animate.last = timestamp;
 
-        // Сдвигаем влево, цикл
-        if (distance > textWidth + containerWidth) {
-          start = timestamp;
-          distance = 0;
-        }
+      posX -= speedPxPerSec * elapsed; // сдвигаем влево
 
-        marquee.style.transform = `translateX(${-distance}px) translateY(-50%)`;
-        animationId = requestAnimationFrame(step);
+      const textWidth = marquee.offsetWidth;
+
+      // Если текст полностью ушёл влево за пределы - сбрасываем позицию
+      if (posX < -textWidth) {
+        posX = marquee.parentElement.offsetWidth;
       }
 
-      if (animationId) cancelAnimationFrame(animationId);
-      animationId = requestAnimationFrame(step);
+      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+
+      requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
-      // Обновляем текст и цвета
+      marquee.textContent = data.text;
       marquee.style.color = data.color;
       document.body.style.backgroundColor = data.bg;
       marquee.style.fontSize = data.size + "px";
 
-      // Обновляем оба span текста
-      const spans = marquee.querySelectorAll('span');
-      spans.forEach(span => {
-        span.textContent = data.text;
-      });
+      // Переводим скорость из 1-10 в пикселей в секунду, например:
+      // max speed 600px/s, min speed 100px/s (можно менять)
+      const minSpeedPx = 100;
+      const maxSpeedPx = 600;
+      let speed = Number(data.speed);
+      speed = Math.min(Math.max(speed, 1), 10);
+      speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
-      // Запускаем анимацию с нужной скоростью
-      const duration = getAnimationDuration(Number(data.speed));
-      startAnimation(duration);
+      marquee.style.opacity = 1;
     }
 
     async function fetchData() {
@@ -111,8 +96,13 @@
       }
     }
 
-    setInterval(fetchData, 5000); // обновлять каждые 5 сек
-    fetchData(); // первый вызов сразу
+    // Старт анимации
+    requestAnimationFrame(animate);
+
+    // Обновляем данные каждые 5 сек
+    setInterval(fetchData, 5000);
+    fetchData();
+
   </script>
 </body>
 </html>
