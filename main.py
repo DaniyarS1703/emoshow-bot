@@ -41,8 +41,7 @@ def safe_edit_reply_markup(chat_id, message_id, reply_markup):
         bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=reply_markup)
     except ApiTelegramException as e:
         if "message is not modified" in str(e):
-            # Игнорируем эту ошибку, т.к. повторное обновление не нужно
-            pass
+            pass  # Игнорируем, если сообщение не изменилось
         else:
             raise
 
