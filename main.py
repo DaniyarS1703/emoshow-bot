@@ -33,7 +33,10 @@ text_colors = [
     ("🟢", "green"), ("🟡", "yellow"), ("🟠", "orange"), ("🟣", "purple"), ("🟤", "brown")
 ]
 sizes = [("60", "60"), ("80", "80"), ("100", "100"), ("120", "120")]
-speed_options = [("🐢 1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"), ("⚡️ 6", "6")]
+speed_options = [
+    ("🐢 1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"),
+    ("6", "6"), ("7", "7"), ("8", "8"), ("9", "9"), ("⚡️ 10", "10")
+]
 direction_options = [("⬅️", "left"), ("➡️", "right")]
 
 def safe_edit_reply_markup(chat_id, message_id, reply_markup):
@@ -41,7 +44,8 @@ def safe_edit_reply_markup(chat_id, message_id, reply_markup):
         bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=reply_markup)
     except ApiTelegramException as e:
         if "message is not modified" in str(e):
-            pass  # Игнорируем, если сообщение не изменилось
+            # Игнорируем эту ошибку, т.к. повторное обновление не нужно
+            pass
         else:
             raise
 
@@ -98,10 +102,9 @@ def size_keyboard():
     return markup
 
 def speed_keyboard():
-    markup = InlineKeyboardMarkup(row_width=3)
+    markup = InlineKeyboardMarkup(row_width=5)  # по 5 кнопок в ряд для компактности
     buttons = [InlineKeyboardButton(name, callback_data=f"setspeed:{value}") for name, value in speed_options]
-    for i in range(0, 6, 3):
-        markup.add(*buttons[i:i+3])
+    markup.add(*buttons)
     return markup
 
 def direction_keyboard():
