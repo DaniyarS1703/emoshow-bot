@@ -14,12 +14,15 @@
       display: flex;
       align-items: center;
       position: relative;
+      /* Чтобы избежать обрезания текста */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     #marquee-container {
       position: relative;
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
+      overflow: visible; /* changed from hidden */
       white-space: nowrap;
     }
     #marquee {
@@ -33,6 +36,7 @@
       max-width: none;
       padding: 0;
       margin: 0;
+      pointer-events: none; /* чтобы не мешал взаимодействию */
     }
   </style>
 </head>
@@ -54,6 +58,7 @@
     let containerHeight = 0;
     let textWidth = 0;
     let textHeight = 0;
+    const margin = 5; // небольшой отступ, чтобы не прилегал впритык
 
     let lastText = "";
     let lastDirection = "";
@@ -65,8 +70,11 @@
     function initPositionAndVelocity() {
       containerWidth = marquee.parentElement.offsetWidth;
       containerHeight = marquee.parentElement.offsetHeight;
-      textWidth = marquee.offsetWidth;
-      textHeight = marquee.offsetHeight;
+
+      // Используем getBoundingClientRect для более точных размеров
+      const rect = marquee.getBoundingClientRect();
+      textWidth = rect.width;
+      textHeight = rect.height;
 
       if (direction === "left") {
         posX = containerWidth;
@@ -74,10 +82,9 @@
         velX = -speedPxPerSec;
         velY = 0;
       } else if (direction === "bounce") {
-        // Если posX,posY уже есть, не сбрасываем позицию, иначе рандомная
         if (posX === undefined || posY === undefined) {
-          posX = Math.random() * (containerWidth - textWidth);
-          posY = Math.random() * (containerHeight - textHeight);
+          posX = Math.random() * (containerWidth - textWidth - 2 * margin) + margin;
+          posY = Math.random() * (containerHeight - textHeight - 2 * margin) + margin;
         }
         const angleRad = degToRad(30);
         const signX = Math.random() < 0.5 ? 1 : -1;
@@ -106,19 +113,19 @@
         posX += velX * elapsed;
         posY += velY * elapsed;
 
-        if (posX <= 0) {
-          posX = 0;
+        if (posX <= margin) {
+          posX = margin;
           velX = -velX;
-        } else if (posX + textWidth >= containerWidth) {
-          posX = containerWidth - textWidth;
+        } else if (posX + textWidth >= containerWidth - margin) {
+          posX = containerWidth - textWidth - margin;
           velX = -velX;
         }
 
-        if (posY <= 0) {
-          posY = 0;
+        if (posY <= margin) {
+          posY = margin;
           velY = -velY;
-        } else if (posY + textHeight >= containerHeight) {
-          posY = containerHeight - textHeight;
+        } else if (posY + textHeight >= containerHeight - margin) {
+          posY = containerHeight - textHeight - margin;
           velY = -velY;
         }
       }
@@ -154,15 +161,19 @@
           setTimeout(() => {
             containerWidth = marquee.parentElement.offsetWidth;
             containerHeight = marquee.parentElement.offsetHeight;
-            textWidth = marquee.offsetWidth;
-            textHeight = marquee.offsetHeight;
+
+            // Обновляем размеры через getBoundingClientRect для точности
+            const rect = marquee.getBoundingClientRect();
+            textWidth = rect.width;
+            textHeight = rect.height;
 
             if (direction === "bounce" && textWidth > containerWidth * 0.75) {
               marquee.style.maxWidth = "75vw";
               marquee.style.whiteSpace = "normal";
               setTimeout(() => {
-                textWidth = marquee.offsetWidth;
-                textHeight = marquee.offsetHeight;
+                const rectNew = marquee.getBoundingClientRect();
+                textWidth = rectNew.width;
+                textHeight = rectNew.height;
               }, 10);
             }
 
@@ -171,7 +182,6 @@
           }, 50);
         }, 300);
       } else {
-        // Просто обновляем параметры без сброса позиции
         marquee.style.color = data.color;
         document.body.style.backgroundColor = data.bg;
         marquee.style.fontSize = data.size + "px";
