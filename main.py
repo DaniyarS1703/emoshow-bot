@@ -8,8 +8,14 @@ API_KEY = os.environ.get("API_KEY", "секретный_ключ_для_apk")
 
 app = Flask(__name__)
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-latest_command = {"text": "Поздравляем с праздником! EMO", "color": "black", "bg": "white", "size": "60"}
-
+latest_command = {
+    "text": "Поздравляем с праздником! EMO",
+    "color": "black",
+    "bg": "white",
+    "size": "60",
+    "direction": "left",
+    "speed": "3"
+}
 waiting_text = {}
 
 # 9 уникальных цветов — квадраты для ФОНА
@@ -24,7 +30,6 @@ bg_colors = [
     ("🟪", "purple"),
     ("🟫", "brown")
 ]
-
 # 9 уникальных цветов — шарики для ЦВЕТА ТЕКСТА
 text_colors = [
     ("⚪", "white"),
@@ -37,12 +42,23 @@ text_colors = [
     ("🟣", "purple"),
     ("🟤", "brown")
 ]
-
 sizes = [
     ("60", "60"),
     ("80", "80"),
     ("100", "100"),
     ("120", "120")
+]
+speed_options = [
+    ("🐢 1", "1"),
+    ("2", "2"),
+    ("3", "3"),
+    ("4", "4"),
+    ("5", "5"),
+    ("⚡️ 6", "6")
+]
+direction_options = [
+    ("⬅️", "left"),
+    ("➡️", "right")
 ]
 
 def menu_keyboard():
@@ -53,12 +69,19 @@ def menu_keyboard():
 def bg_keyboard():
     markup = InlineKeyboardMarkup(row_width=3)
     buttons = [InlineKeyboardButton(emoji, callback_data=f"setbg:{color}") for emoji, color in bg_colors]
-    # Добавляем по 3 в ряд (3x3)
     for i in range(0, 9, 3):
         markup.add(*buttons[i:i+3])
-    markup.add(InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"))
-    markup.add(InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"))
-    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
+    markup.add(
+        InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
+        InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"),
+    )
+    markup.add(
+        InlineKeyboardButton("Изменить текст", callback_data="edit_text"),
+    )
+    markup.add(
+        InlineKeyboardButton("Скорость", callback_data="show_speed"),
+        InlineKeyboardButton("Направление", callback_data="show_direction")
+    )
     return markup
 
 def text_color_keyboard():
@@ -66,18 +89,47 @@ def text_color_keyboard():
     buttons = [InlineKeyboardButton(emoji, callback_data=f"setcolor:{color}") for emoji, color in text_colors]
     for i in range(0, 9, 3):
         markup.add(*buttons[i:i+3])
-    markup.add(InlineKeyboardButton("Цвет фона", callback_data="show_bg"))
-    markup.add(InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"))
-    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
+    markup.add(
+        InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
+        InlineKeyboardButton("Размер шрифта", callback_data="show_sizes"),
+    )
+    markup.add(
+        InlineKeyboardButton("Изменить текст", callback_data="edit_text"),
+    )
+    markup.add(
+        InlineKeyboardButton("Скорость", callback_data="show_speed"),
+        InlineKeyboardButton("Направление", callback_data="show_direction")
+    )
     return markup
 
 def size_keyboard():
     markup = InlineKeyboardMarkup(row_width=2)
     buttons = [InlineKeyboardButton(name, callback_data=f"setsize:{size}") for name, size in sizes]
     markup.add(*buttons)
-    markup.add(InlineKeyboardButton("Цвет фона", callback_data="show_bg"))
-    markup.add(InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"))
-    markup.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
+    markup.add(
+        InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
+        InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
+    )
+    markup.add(
+        InlineKeyboardButton("Изменить текст", callback_data="edit_text"),
+    )
+    markup.add(
+        InlineKeyboardButton("Скорость", callback_data="show_speed"),
+        InlineKeyboardButton("Направление", callback_data="show_direction")
+    )
+    return markup
+
+def speed_keyboard():
+    markup = InlineKeyboardMarkup(row_width=3)
+    buttons = [InlineKeyboardButton(name, callback_data=f"setspeed:{value}") for name, value in speed_options]
+    for i in range(0, 6, 3):
+        markup.add(*buttons[i:i+3])
+    return markup
+
+def direction_keyboard():
+    markup = InlineKeyboardMarkup(row_width=2)
+    buttons = [InlineKeyboardButton(name, callback_data=f"setdirection:{value}") for name, value in direction_options]
+    markup.add(*buttons)
     return markup
 
 @bot.message_handler(commands=['start'])
@@ -130,6 +182,30 @@ def show_bg_colors(call):
 @bot.callback_query_handler(func=lambda call: call.data == "show_sizes")
 def show_sizes(call):
     bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=size_keyboard())
+
+@bot.callback_query_handler(func=lambda call: call.data == "show_speed")
+def show_speed(call):
+    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=speed_keyboard())
+
+@bot.callback_query_handler(func=lambda call: call.data == "show_direction")
+def show_direction(call):
+    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=direction_keyboard())
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("setspeed:"))
+def callback_set_speed(call):
+    speed = call.data.split(":")[1]
+    latest_command["speed"] = speed
+    bot.answer_callback_query(call.id, text=f"Скорость: {speed}")
+    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    bot.send_message(call.message.chat.id, f"Скорость движения: {speed}", reply_markup=menu_keyboard())
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("setdirection:"))
+def callback_set_direction(call):
+    direction = call.data.split(":")[1]
+    latest_command["direction"] = direction
+    bot.answer_callback_query(call.id, text=f"Направление: {('Влево' if direction=='left' else 'Вправо')}")
+    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    bot.send_message(call.message.chat.id, f"Направление: {('⬅️ Влево' if direction=='left' else '➡️ Вправо')}", reply_markup=menu_keyboard())
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
