@@ -1,12 +1,15 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from flask_cors import CORS
 
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "ТВОЙ_ТОКЕН_ОТ_BOTFATHER")
-API_KEY = os.environ.get("API_KEY", "секретный_ключ_для_apk")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw")
+API_KEY = os.environ.get("API_KEY", "77777")
 
 app = Flask(__name__)
+CORS(app)  # Разрешаем CORS-запросы
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 latest_command = {
     "text": "Поздравляем с праздником! EMO",
@@ -18,7 +21,8 @@ latest_command = {
 }
 waiting_text = {}
 
-# 9 уникальных цветов — квадраты для ФОНА
+# Цвета и клавиатуры (оставляем без изменений)
+
 bg_colors = [
     ("⬜", "white"),
     ("⬛", "black"),
@@ -30,7 +34,7 @@ bg_colors = [
     ("🟪", "purple"),
     ("🟫", "brown")
 ]
-# 9 уникальных цветов — шарики для ЦВЕТА ТЕКСТА
+
 text_colors = [
     ("⚪", "white"),
     ("⚫", "black"),
@@ -42,12 +46,14 @@ text_colors = [
     ("🟣", "purple"),
     ("🟤", "brown")
 ]
+
 sizes = [
     ("60", "60"),
     ("80", "80"),
     ("100", "100"),
     ("120", "120")
 ]
+
 speed_options = [
     ("🐢 1", "1"),
     ("2", "2"),
@@ -56,6 +62,7 @@ speed_options = [
     ("5", "5"),
     ("⚡️ 6", "6")
 ]
+
 direction_options = [
     ("⬅️", "left"),
     ("➡️", "right")
@@ -243,7 +250,7 @@ def api_latest():
 
 @app.route('/')
 def index():
-    return "EMOSHOW Bot server running!"
+    return send_from_directory('.', 'index.html')
 
 if __name__ == '__main__':
     import threading
