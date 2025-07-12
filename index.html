@@ -28,7 +28,7 @@
       left: 0;
       white-space: nowrap;
       will-change: transform;
-      opacity: 0;
+      opacity: 1;
       transition: opacity 0.3s ease;
       max-width: none;
       padding: 0;
@@ -48,7 +48,7 @@
     let speedPxPerSec = 100;
     let posX, posY;
     let velX, velY;
-    let direction = "left"; // "left" - классика, "bounce" - отскок под углом
+    let direction = "left";
 
     let containerWidth = 0;
     let containerHeight = 0;
@@ -74,8 +74,11 @@
         velX = -speedPxPerSec;
         velY = 0;
       } else if (direction === "bounce") {
-        posX = Math.random() * (containerWidth - textWidth);
-        posY = Math.random() * (containerHeight - textHeight);
+        // Если posX,posY уже есть, не сбрасываем позицию, иначе рандомная
+        if (posX === undefined || posY === undefined) {
+          posX = Math.random() * (containerWidth - textWidth);
+          posY = Math.random() * (containerHeight - textHeight);
+        }
         const angleRad = degToRad(30);
         const signX = Math.random() < 0.5 ? 1 : -1;
         const signY = Math.random() < 0.5 ? 1 : -1;
@@ -121,6 +124,7 @@
       }
 
       marquee.style.transform = `translate(${posX}px, ${posY}px)`;
+
       requestAnimationFrame(animate);
     }
 
@@ -128,14 +132,7 @@
       const textChanged = (data.text !== lastText);
       const directionChanged = (data.direction !== lastDirection);
 
-      if (directionChanged) {
-        // При смене режима обновляем страницу для сброса анимации
-        location.reload();
-        return; // дальше не продолжаем
-      }
-
-      // Если текст изменился — плавно меняем opacity для плавного перехода
-      if (textChanged) {
+      if (textChanged || directionChanged) {
         marquee.style.opacity = 0;
         setTimeout(() => {
           marquee.textContent = data.text;
@@ -174,7 +171,7 @@
           }, 50);
         }, 300);
       } else {
-        // Если текст не изменился, просто обновляем цвета и скорость без сброса позиции
+        // Просто обновляем параметры без сброса позиции
         marquee.style.color = data.color;
         document.body.style.backgroundColor = data.bg;
         marquee.style.fontSize = data.size + "px";
@@ -184,6 +181,11 @@
         let speed = Number(data.speed);
         speed = Math.min(Math.max(speed, 1), 10);
         speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
+
+        if (directionChanged) {
+          direction = data.direction || "left";
+          initPositionAndVelocity();
+        }
       }
 
       lastText = data.text;
