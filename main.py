@@ -46,7 +46,7 @@ speed_options = [
     ("🐢 1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"),
     ("6", "6"), ("7", "7"), ("8", "8"), ("9", "9"), ("⚡️ 10", "10")
 ]
-direction_options = [("⬅️", "left"), ("🖥️ Экран", "bounce")]
+direction_options = [("⬅️ Влево", "left"), ("🖥️ Экран", "bounce")]
 
 def safe_edit_reply_markup(chat_id, message_id, reply_markup):
     try:
@@ -219,11 +219,17 @@ def callback_set_speed(call):
 def callback_set_direction(call):
     direction = call.data.split(":")[1]
     latest_command["direction"] = direction
-    text_dir = "Влево" if direction == "left" else "Экран (отскок)"
+    text = ""
+    if direction == "left":
+        text = "Направление: ⬅️ Влево"
+    elif direction == "bounce":
+        text = "Режим: 🖥️ Отскок по экрану"
+    else:
+        text = f"Направление: {direction}"
     print(f"Direction changed to: {direction} by user {call.from_user.id}")
-    bot.answer_callback_query(call.id, text=f"Направление: {text_dir}")
+    bot.answer_callback_query(call.id, text=text)
     safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
-    bot.send_message(call.message.chat.id, f"Направление: {text_dir}", reply_markup=menu_keyboard())
+    bot.send_message(call.message.chat.id, text, reply_markup=menu_keyboard())
 
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
@@ -271,4 +277,4 @@ def index():
 if __name__ == '__main__':
     import threading
     threading.Thread(target=bot.polling, daemon=True).start()
-    app.run(host='0.0.0.0', port=10000)
+    app.run(host="0.0.0.0", port=10000)
