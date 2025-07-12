@@ -26,8 +26,9 @@
       position: absolute;
       top: 50%;
       white-space: nowrap;
-      transform: translateY(-50%) translateX(100%);
       will-change: transform;
+      transform: translateY(-50%);
+      left: 0;
     }
   </style>
 </head>
@@ -39,33 +40,78 @@
   <script>
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
+    const container = marquee.parentElement;
 
-    // Скорость: пикселей в секунду (будем пересчитывать из speed из API)
     let speedPxPerSec = 100; 
+    let posX;
+    let directionX = -1; // направление по X: -1 влево, 1 вправо
+    let lastTimestamp;
 
-    let posX; // текущая позиция текста
-
-    // Обновить позицию по времени
-    function animate(timestamp) {
-      if (!animate.last) animate.last = timestamp;
+    // Анимация с отскоком
+    function animateBounce(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
       if (posX === undefined) {
-        posX = marquee.parentElement.offsetWidth; // начинаем справа вне экрана
+        posX = 0; // стартуем с левого края контейнера
+        directionX = 1; // сначала движемся вправо
       }
-      const elapsed = (timestamp - animate.last) / 1000; // сек
-      animate.last = timestamp;
+      const elapsed = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
 
-      posX -= speedPxPerSec * elapsed; // сдвигаем влево
+      posX += directionX * speedPxPerSec * elapsed;
 
+      const containerWidth = container.offsetWidth;
       const textWidth = marquee.offsetWidth;
 
-      // Если текст полностью ушёл влево за пределы - сбрасываем позицию
-      if (posX < -textWidth) {
-        posX = marquee.parentElement.offsetWidth;
+      // Проверяем отскок от правого края
+      if (posX + textWidth >= containerWidth) {
+        posX = containerWidth - textWidth;
+        directionX = -1;
+      }
+      // Проверяем отскок от левого края
+      if (posX <= 0) {
+        posX = 0;
+        directionX = 1;
       }
 
       marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      requestAnimationFrame(animateBounce);
+    }
 
-      requestAnimationFrame(animate);
+    // Классическая анимация слева направо (от края к краю)
+    function animateLeft(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      if (posX === undefined) {
+        posX = container.offsetWidth;
+      }
+      const elapsed = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      posX -= speedPxPerSec * elapsed;
+
+      const textWidth = marquee.offsetWidth;
+
+      if (posX < -textWidth) {
+        posX = container.offsetWidth;
+      }
+
+      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      requestAnimationFrame(animateLeft);
+    }
+
+    let animationId;
+    let currentDirection = 'left';
+
+    function startAnimation(direction) {
+      cancelAnimationFrame(animationId);
+      posX = undefined;
+      lastTimestamp = undefined;
+      currentDirection = direction;
+
+      if (direction === 'bounce') {
+        animationId = requestAnimationFrame(animateBounce);
+      } else {
+        animationId = requestAnimationFrame(animateLeft);
+      }
     }
 
     function updateMarquee(data) {
@@ -74,13 +120,17 @@
       document.body.style.backgroundColor = data.bg;
       marquee.style.fontSize = data.size + "px";
 
-      // Переводим скорость из 1-10 в пикселей в секунду, например:
-      // max speed 600px/s, min speed 100px/s (можно менять)
+      // Скорость от 1 до 10, переводим в пиксели в секунду
       const minSpeedPx = 100;
       const maxSpeedPx = 600;
       let speed = Number(data.speed);
       speed = Math.min(Math.max(speed, 1), 10);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
+
+      // Если направление изменилось - перезапускаем анимацию
+      if (data.direction !== currentDirection) {
+        startAnimation(data.direction);
+      }
 
       marquee.style.opacity = 1;
     }
@@ -96,13 +146,12 @@
       }
     }
 
-    // Старт анимации
-    requestAnimationFrame(animate);
+    // Запускаем анимацию слева направо по умолчанию
+    startAnimation('left');
 
-    // Обновляем данные каждые 5 сек
+    // Обновляем данные каждые 5 секунд
     setInterval(fetchData, 5000);
     fetchData();
-
   </script>
 </body>
 </html>
