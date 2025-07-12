@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>EMOSHOW — Классическая бегущая строка fullscreen</title>
+  <title>EMOSHOW — Бегущая строка fullscreen</title>
   <style>
     html, body {
       margin: 0; 
@@ -10,50 +10,45 @@
       height: 100%;
       overflow: hidden;
       background-color: black;
-      color: white;
-      font-size: 60px;
-      user-select: none;
       display: flex;
       align-items: center;
       justify-content: flex-start;
+      color: white;
+      font-size: 60px;
       position: relative;
+      user-select: none;
     }
     #marquee-container {
       position: relative;
       width: 100vw;
       height: 100vh;
-      overflow: hidden; /* важный момент: обрезаем содержимое */
+      overflow: hidden;
     }
     #marquee {
       position: absolute;
       white-space: nowrap;
       will-change: transform;
+      color: inherit;
+      font-size: inherit;
       top: 50%;
-      transform: translateY(-50%) translateX(100%); /* начинаем справа за пределами */
+      /* Начинаем справа за пределами экрана */
+      transform: translateY(-50%) translateX(100%);
       animation-timing-function: linear;
       animation-iteration-count: infinite;
+      animation-name: marquee-left;
+      animation-duration: 15s;
       opacity: 0;
       transition: opacity 0.7s ease;
-      --marquee-width: 0px; /* переменная для ширины текста */
+      /* CSS переменная для ширины текста */
+      --marquee-width: 0px;
     }
-
     @keyframes marquee-left {
-      0% {
-        transform: translateX(100%) translateY(-50%);
-      }
-      100% {
-        /* смещаем влево на ширину текста + ширину контейнера */
-        transform: translateX(calc(-1 * var(--marquee-width) - 100%)) translateY(-50%);
-      }
+      0%   { transform: translateX(100%) translateY(-50%); }
+      100% { transform: translateX(calc(-1 * var(--marquee-width) - 100%)) translateY(-50%); }
     }
-
     @keyframes marquee-right {
-      0% {
-        transform: translateX(calc(-1 * var(--marquee-width) - 100%)) translateY(-50%);
-      }
-      100% {
-        transform: translateX(100%) translateY(-50%);
-      }
+      0%   { transform: translateX(calc(-1 * var(--marquee-width) - 100%)) translateY(-50%); }
+      100% { transform: translateX(100%) translateY(-50%); }
     }
   </style>
 </head>
@@ -66,13 +61,15 @@
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
 
+    // Функция для вычисления длительности анимации по скорости (1-10)
     function getAnimationDuration(speed) {
-      const maxDuration = 30; // секунды, медленно
-      const minDuration = 5;  // секунды, быстро
+      const maxDuration = 30; // сек (медленно)
+      const minDuration = 5;  // сек (быстро)
       speed = Math.min(Math.max(speed, 1), 10);
       return maxDuration - (speed - 1) * ((maxDuration - minDuration) / 9);
     }
 
+    // Обновление текста бегущей строки с корректным уходом за пределы экрана
     function updateMarquee(data) {
       marquee.textContent = data.text;
       marquee.style.color = data.color;
@@ -80,19 +77,25 @@
       marquee.style.fontSize = data.size + "px";
 
       requestAnimationFrame(() => {
-        const textWidthPx = marquee.offsetWidth + 'px';
-        marquee.style.setProperty('--marquee-width', textWidthPx);
+        // Получаем ширину текста в px
+        const width = marquee.offsetWidth + 'px';
+        // Устанавливаем CSS переменную --marquee-width для анимации
+        marquee.style.setProperty('--marquee-width', width);
 
+        // Рассчитываем длительность анимации в зависимости от скорости
         const duration = getAnimationDuration(Number(data.speed));
         marquee.style.animationDuration = duration + 's';
 
+        // Выбираем анимацию в зависимости от направления
         const animationName = data.direction === "left" ? "marquee-left" : "marquee-right";
 
-        marquee.style.animationName = "none"; // сброс анимации
+        // Перезапускаем анимацию
+        marquee.style.animationName = "none";
         void marquee.offsetWidth; // триггер перезапуска анимации
         marquee.style.animationName = animationName;
 
-        marquee.style.opacity = 1; // показать текст плавно
+        // Плавно показать текст после загрузки
+        marquee.style.opacity = 1;
       });
     }
 
@@ -107,7 +110,7 @@
       }
     }
 
-    setInterval(fetchData, 5000); // обновлять данные каждые 5 секунд
+    setInterval(fetchData, 5000); // обновлять каждые 5 секунд
     fetchData(); // первый вызов сразу
   </script>
 </body>
