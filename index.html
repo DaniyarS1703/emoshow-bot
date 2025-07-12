@@ -87,24 +87,18 @@
         posX += velX * elapsed;
         posY += velY * elapsed;
 
-        // Столкновение с левой стенкой - текст касается левой границы (posX = 0)
         if (posX <= 0) {
           posX = 0;
           velX = -velX;
-        }
-        // Столкновение с правой стенкой - текст касается правой границы (posX + textWidth = containerWidth)
-        else if (posX + textWidth >= containerWidth) {
+        } else if (posX + textWidth >= containerWidth) {
           posX = containerWidth - textWidth;
           velX = -velX;
         }
 
-        // Столкновение с верхней стенкой - текст касается верхней границы (posY = 0)
         if (posY <= 0) {
           posY = 0;
           velY = -velY;
-        }
-        // Столкновение с нижней стенкой - текст касается нижней границы (posY + textHeight = containerHeight)
-        else if (posY + textHeight >= containerHeight) {
+        } else if (posY + textHeight >= containerHeight) {
           posY = containerHeight - textHeight;
           velY = -velY;
         }
@@ -140,7 +134,6 @@
         textWidth = marquee.offsetWidth;
         textHeight = marquee.offsetHeight;
 
-        // В режиме "bounce" если текст длиннее 75% ширины, сжимаем
         if (direction === "bounce" && textWidth > containerWidth * 0.75) {
           marquee.style.maxWidth = "75vw";
           marquee.style.whiteSpace = "normal";
@@ -152,9 +145,10 @@
       }, 10);
 
       marquee.style.opacity = 1;
-      // Сброс позиции, чтобы анимация начиналась корректно с новыми размерами
-      posX = undefined;
-      posY = undefined;
+
+      // Убираем сброс позиции для плавности
+      // posX = undefined;
+      // posY = undefined;
     }
 
     async function fetchData() {
