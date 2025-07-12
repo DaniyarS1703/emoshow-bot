@@ -24,13 +24,15 @@
     }
     #marquee {
       position: absolute;
-      top: 50%;
+      top: 0;
+      left: 0;
       white-space: nowrap;
-      transform: translateY(-50%) translateX(0);
       will-change: transform;
       opacity: 0;
       transition: opacity 0.5s ease;
       max-width: none;
+      padding: 0;
+      margin: 0;
     }
   </style>
 </head>
@@ -44,42 +46,68 @@
     const marquee = document.getElementById("marquee");
 
     let speedPxPerSec = 100;
-    let posX; // текущая позиция текста
-    let direction = "left"; // "left" — классика, "bounce" — отскок
-    let bounceDir = 1; // направление для отскока: 1 вправо, -1 влево
+    let posX, posY;
+    let velX, velY;
+    let direction = "left"; // "left" - классика, "bounce" - отскок под углом
 
     let containerWidth = 0;
+    let containerHeight = 0;
     let textWidth = 0;
+    let textHeight = 0;
+
+    function degToRad(deg) {
+      return deg * Math.PI / 180;
+    }
 
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
-      if (posX === undefined) {
-        // Стартовая позиция зависит от направления
-        posX = (direction === "left") ? containerWidth : 0;
-      }
       const elapsed = (timestamp - animate.last) / 1000;
       animate.last = timestamp;
 
+      if (posX === undefined || posY === undefined) {
+        containerWidth = marquee.parentElement.offsetWidth;
+        containerHeight = marquee.parentElement.offsetHeight;
+        posX = direction === "left" ? containerWidth : 0;
+        posY = (containerHeight - textHeight) / 2;
+        if (direction === "bounce") {
+          // Начальная скорость под углом 30 градусов вправо-вверх
+          const angleRad = degToRad(30);
+          velX = speedPxPerSec * Math.cos(angleRad);
+          velY = -speedPxPerSec * Math.sin(angleRad); // вверх — отрицательное Y
+        }
+      }
+
       if (direction === "left") {
-        // Классическая бегущая строка слева направо
         posX -= speedPxPerSec * elapsed;
         if (posX < -textWidth) {
           posX = containerWidth;
         }
+        posY = (containerHeight - textHeight) / 2;
       } else if (direction === "bounce") {
-        // Отскок
-        posX += bounceDir * speedPxPerSec * elapsed;
+        posX += velX * elapsed;
+        posY += velY * elapsed;
 
-        if (posX + textWidth >= containerWidth) {
-          posX = containerWidth - textWidth;
-          bounceDir = -1;
-        } else if (posX <= 0) {
+        // Проверяем столкновения с боковыми стенками
+        if (posX <= 0) {
           posX = 0;
-          bounceDir = 1;
+          velX = -velX;
+        } else if (posX + textWidth >= containerWidth) {
+          posX = containerWidth - textWidth;
+          velX = -velX;
+        }
+
+        // Проверяем столкновения с верхней и нижней стенками
+        if (posY <= 0) {
+          posY = 0;
+          velY = -velY;
+        } else if (posY + textHeight >= containerHeight) {
+          posY = containerHeight - textHeight;
+          velY = -velY;
         }
       }
 
-      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      marquee.style.transform = `translate(${posX}px, ${posY}px)`;
+
       requestAnimationFrame(animate);
     }
 
@@ -97,29 +125,32 @@
 
       direction = data.direction || "left";
 
-      containerWidth = marquee.parentElement.offsetWidth;
-
-      // Сбросим сжатие по умолчанию
+      // Сброс стилей для точных измерений
       marquee.style.maxWidth = "none";
       marquee.style.whiteSpace = "nowrap";
 
-      // Если режим "отскок", то сжимаем, если текст слишком длинный
-      if (direction === "bounce") {
-        // Надо дождаться, пока текст применится, чтобы получить ширину
-        setTimeout(() => {
-          textWidth = marquee.offsetWidth;
-          if (textWidth > containerWidth * 0.75) {
-            marquee.style.maxWidth = "75vw";
-            marquee.style.whiteSpace = "normal";
-            textWidth = marquee.offsetWidth; // пересчитать ширину после сжатия
-          }
-        }, 10);
-      } else {
-        // В режиме "left" просто получаем ширину текста
+      // Обновим размеры после применения текста и стилей (через setTimeout для рендеринга)
+      setTimeout(() => {
+        containerWidth = marquee.parentElement.offsetWidth;
+        containerHeight = marquee.parentElement.offsetHeight;
         textWidth = marquee.offsetWidth;
-      }
+        textHeight = marquee.offsetHeight;
+
+        // В режиме "bounce" если текст длиннее 75% ширины, сжимаем
+        if (direction === "bounce" && textWidth > containerWidth * 0.75) {
+          marquee.style.maxWidth = "75vw";
+          marquee.style.whiteSpace = "normal";
+          setTimeout(() => {
+            textWidth = marquee.offsetWidth;
+            textHeight = marquee.offsetHeight;
+          }, 10);
+        }
+      }, 10);
 
       marquee.style.opacity = 1;
+      // Сброс позиции, чтобы анимация начиналась корректно с новыми размерами
+      posX = undefined;
+      posY = undefined;
     }
 
     async function fetchData() {
