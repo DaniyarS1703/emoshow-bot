@@ -1,14 +1,15 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS  # Добавлено для CORS
+from flask_cors import CORS
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.apihelper import ApiTelegramException
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw")
 API_KEY = os.environ.get("API_KEY", "77777")
 
 app = Flask(__name__)
-CORS(app)  # Разрешаем CORS для всех маршрутов
+CORS(app)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -34,6 +35,15 @@ text_colors = [
 sizes = [("60", "60"), ("80", "80"), ("100", "100"), ("120", "120")]
 speed_options = [("🐢 1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"), ("⚡️ 6", "6")]
 direction_options = [("⬅️", "left"), ("➡️", "right")]
+
+def safe_edit_reply_markup(chat_id, message_id, reply_markup):
+    try:
+        bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=reply_markup)
+    except ApiTelegramException as e:
+        if "message is not modified" in str(e):
+            pass
+        else:
+            raise
 
 def menu_keyboard():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -119,7 +129,7 @@ def callback_set_bg(call):
     color = call.data.split(":")[1]
     latest_command["bg"] = color
     bot.answer_callback_query(call.id, text=f"Фон сменён!")
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Фон сменён!", reply_markup=menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setcolor:"))
@@ -127,7 +137,7 @@ def callback_set_color(call):
     color = call.data.split(":")[1]
     latest_command["color"] = color
     bot.answer_callback_query(call.id, text=f"Цвет текста: {color}")
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Цвет текста обновлён!", reply_markup=menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setsize:"))
@@ -135,42 +145,42 @@ def callback_set_size(call):
     size = call.data.split(":")[1]
     latest_command["size"] = size
     bot.answer_callback_query(call.id, text=f"Размер шрифта: {size}")
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Размер шрифта: {size}", reply_markup=menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == "edit_text")
 def callback_edit_text(call):
     waiting_text[call.from_user.id] = True
     bot.answer_callback_query(call.id, text="Введи новый текст")
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, "Отправь новый текст для бегущей строки:")
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_text_colors")
 def show_text_colors(call):
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=text_color_keyboard())
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=text_color_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_bg")
 def show_bg_colors(call):
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=bg_keyboard())
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=bg_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_sizes")
 def show_sizes(call):
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=size_keyboard())
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=size_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_speed")
 def show_speed(call):
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=speed_keyboard())
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=speed_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_direction")
 def show_direction(call):
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=direction_keyboard())
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=direction_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setspeed:"))
 def callback_set_speed(call):
     speed = call.data.split(":")[1]
     latest_command["speed"] = speed
     bot.answer_callback_query(call.id, text=f"Скорость: {speed}")
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Скорость движения: {speed}", reply_markup=menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("setdirection:"))
@@ -178,7 +188,7 @@ def callback_set_direction(call):
     direction = call.data.split(":")[1]
     latest_command["direction"] = direction
     bot.answer_callback_query(call.id, text=f"Направление: {('Влево' if direction=='left' else 'Вправо')}")
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+    safe_edit_reply_markup(call.message.chat.id, call.message.message_id, None)
     bot.send_message(call.message.chat.id, f"Направление: {('⬅️ Влево' if direction=='left' else '➡️ Вправо')}", reply_markup=menu_keyboard())
 
 @bot.message_handler(func=lambda m: True)
