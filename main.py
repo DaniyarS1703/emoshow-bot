@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS  # Добавлено для CORS
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -7,6 +8,8 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "7377508266:AAHv1EKkXgP3AjVbcJ
 API_KEY = os.environ.get("API_KEY", "77777")
 
 app = Flask(__name__)
+CORS(app)  # Разрешаем CORS для всех маршрутов
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 latest_command = {
