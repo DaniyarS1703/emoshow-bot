@@ -81,15 +81,26 @@
         velX = -speedPxPerSec;
         velY = 0;
       } else if (direction === "bounce") {
-        if (posX === undefined || posY === undefined) {
-          posX = Math.random() * (containerWidth - textWidth - 2 * margin) + margin;
+        // Если текст длиннее 75% и перенос включён (whiteSpace normal),
+        // то центрируем по горизонтали для переноса
+        if (marquee.style.whiteSpace === "normal") {
+          posX = (containerWidth - textWidth) / 2; // центр горизонтально
           posY = Math.random() * (containerHeight - textHeight - 2 * margin) + margin;
+          velX = 0; // отключаем горизонтальное движение
+          const signY = Math.random() < 0.5 ? 1 : -1;
+          velY = signY * speedPxPerSec;
+        } else {
+          // Обычный отскок с углом 30 градусов и случайным знаком
+          if (posX === undefined || posY === undefined) {
+            posX = Math.random() * (containerWidth - textWidth - 2 * margin) + margin;
+            posY = Math.random() * (containerHeight - textHeight - 2 * margin) + margin;
+          }
+          const angleRad = degToRad(30);
+          const signX = Math.random() < 0.5 ? 1 : -1;
+          const signY = Math.random() < 0.5 ? 1 : -1;
+          velX = signX * speedPxPerSec * Math.cos(angleRad);
+          velY = signY * speedPxPerSec * Math.sin(angleRad);
         }
-        const angleRad = degToRad(30);
-        const signX = Math.random() < 0.5 ? 1 : -1;
-        const signY = Math.random() < 0.5 ? 1 : -1;
-        velX = signX * speedPxPerSec * Math.cos(angleRad);
-        velY = signY * speedPxPerSec * Math.sin(angleRad);
       }
     }
 
@@ -109,23 +120,37 @@
         }
         posY = (containerHeight - textHeight) / 2;
       } else if (direction === "bounce") {
-        posX += velX * elapsed;
-        posY += velY * elapsed;
+        if (marquee.style.whiteSpace === "normal") {
+          // Движение только вертикальное
+          posY += velY * elapsed;
 
-        if (posX <= margin) {
-          posX = margin;
-          velX = -velX;
-        } else if (posX + textWidth >= containerWidth - margin) {
-          posX = containerWidth - textWidth - margin;
-          velX = -velX;
-        }
+          if (posY <= margin) {
+            posY = margin;
+            velY = -velY;
+          } else if (posY + textHeight >= containerHeight - margin) {
+            posY = containerHeight - textHeight - margin;
+            velY = -velY;
+          }
+          // Горизонтальная позиция зафиксирована (центрирована)
+        } else {
+          posX += velX * elapsed;
+          posY += velY * elapsed;
 
-        if (posY <= margin) {
-          posY = margin;
-          velY = -velY;
-        } else if (posY + textHeight >= containerHeight - margin) {
-          posY = containerHeight - textHeight - margin;
-          velY = -velY;
+          if (posX <= margin) {
+            posX = margin;
+            velX = -velX;
+          } else if (posX + textWidth >= containerWidth - margin) {
+            posX = containerWidth - textWidth - margin;
+            velX = -velX;
+          }
+
+          if (posY <= margin) {
+            posY = margin;
+            velY = -velY;
+          } else if (posY + textHeight >= containerHeight - margin) {
+            posY = containerHeight - textHeight - margin;
+            velY = -velY;
+          }
         }
       }
 
