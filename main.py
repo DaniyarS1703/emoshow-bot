@@ -22,165 +22,154 @@ latest_command = {
     "speed":     "3"
 }
 waiting_text = {}
-menu_state = {}  # user_id: category
 
-# Основные категории меню
-CATEGORIES = [
-    ("bg",      "Цвет фона"),
-    ("color",   "Цвет текста"),
-    ("size",    "Размер шрифта"),
-    ("speed",   "Скорость"),
-    ("text",    "ТЕКСТ"),
-    ("fixed",   "Закрепить"),
-    ("scroll",  "Бегущая строка"),
-    ("pingpong","Пинг-понг"),
-]
+CATEGORIES = ["bg", "color", "size", "speed", "text"]
+CATEGORY_TITLES = {
+    "bg": "Цвет фона",
+    "color": "Цвет текста",
+    "size": "Размер",
+    "speed": "Скорость",
+    "text": "ТЕКСТ"
+}
 
-def get_active_category(user_id):
-    return menu_state.get(user_id, "bg")
-
-def set_active_category(user_id, cat):
-    menu_state[user_id] = cat
-
-def panel_keyboard(user_id):
-    active = get_active_category(user_id)
-    panel = []
-    for code, title in CATEGORIES:
-        if code == active:
-            panel.append(InlineKeyboardButton(f"■ {title} ■", callback_data=f"cat:{code}"))
+def menu_inline_keyboard(active="bg"):
+    kb = InlineKeyboardMarkup(row_width=3)
+    for cat in CATEGORIES:
+        title = CATEGORY_TITLES[cat]
+        if cat == active:
+            text = f"■ {title.upper()} ■"
         else:
-            panel.append(InlineKeyboardButton(title, callback_data=f"cat:{code}"))
-    # Кнопки по 3 в ряд
-    kb = []
-    for i in range(0, len(panel), 3):
-        kb.append(panel[i:i+3])
+            text = title
+        callback = "edit_text" if cat == "text" else f"show_{cat}"
+        kb.add(InlineKeyboardButton(text, callback_data=callback))
     return kb
 
-def make_keyboard(user_id):
-    active = get_active_category(user_id)
+def bg_color_keyboard(current_bg):
+    # 9+3 цветов + 4 анимации
+    colors = [
+        ("⬜", "white"),    ("⬛", "black"),    ("🟥", "red"),
+        ("🟦", "blue"),     ("🟩", "green"),   ("🟨", "yellow"),
+        ("🟧", "orange"),   ("🟪", "purple"),  ("🟫", "brown"),
+        ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown")
+    ]
+    anims = [
+        ("🌈 Радуга", "raduga"),
+        ("🟠 Диско", "disco"),
+        ("🟪 Лучи", "luchi"),
+        ("🟣 Огоньки", "ogni")
+    ]
     kb = InlineKeyboardMarkup(row_width=3)
-    # 1. Выбор значений текущей категории
-    if active == "bg":
-        current_bg = latest_command.get("bg", "white")
-        colors = [
-            ("⬜", "white"),   ("⬛", "black"),   ("🟥", "red"),
-            ("🟦", "blue"),    ("🟩", "green"),  ("🟨", "yellow"),
-            ("🟧", "orange"),  ("🟪", "purple"), ("🟫", "brown"),
-            ("🩷", "#FF00FF"), ("🩵", "#00FFFF"), ("🩶", "#CCCCCC"),
-        ]
-        btns = []
-        for emoji, val in colors:
-            label = emoji + (" ✔" if str(val).lower() == str(current_bg).lower() else "")
-            btns.append(InlineKeyboardButton(label, callback_data=f"setbg:{val}"))
-        for i in range(0, len(btns), 3):
-            kb.add(*btns[i:i+3])
-        # Анимированные
-        anim = [
-            ("🟠 Диско", "disco"),
-            ("🌈 Радуга", "raduga"),
-            ("🟪 Лучи", "luchi"),
-            ("🟣 Огоньки", "ogni"),
-        ]
-        btns2 = []
-        for name, val in anim:
-            label = name + (" ✔" if str(current_bg).lower() == val else "")
-            btns2.append(InlineKeyboardButton(label, callback_data=f"setbg:{val}"))
-        for i in range(0, len(btns2), 3):
-            kb.add(*btns2[i:i+3])
-    elif active == "color":
-        current_color = latest_command.get("color", "black")
-        colors = [
-            ("⬜", "white"),   ("⬛", "black"),   ("🟥", "red"),
-            ("🟦", "blue"),    ("🟩", "green"),  ("🟨", "yellow"),
-            ("🟧", "orange"),  ("🟪", "purple"), ("🟫", "brown"),
-            ("🩷", "#FF00FF"), ("🩵", "#00FFFF"), ("🩶", "#CCCCCC"),
-        ]
-        btns = []
-        for emoji, val in colors:
-            label = emoji + (" ✔" if str(val).lower() == str(current_color).lower() else "")
-            btns.append(InlineKeyboardButton(label, callback_data=f"setcolor:{val}"))
-        for i in range(0, len(btns), 3):
-            kb.add(*btns[i:i+3])
-    elif active == "size":
-        current_size = str(latest_command.get("size", "70"))
-        sizes = ["70","80","90","100","110","120"]
-        btns = []
-        for size in sizes:
-            label = size + (" ✔" if size == current_size else "")
-            btns.append(InlineKeyboardButton(label, callback_data=f"setsize:{size}"))
-        for i in range(0, len(btns), 3):
-            kb.add(*btns[i:i+3])
-    elif active == "speed":
-        current_speed = str(latest_command.get("speed", "3"))
-        btns = []
-        for val in range(1, 10):
-            label = f"{val}" if val != 1 and val != 9 else ("🐢1" if val == 1 else "⚡️9")
-            label += " ✔" if str(val) == current_speed else ""
-            btns.append(InlineKeyboardButton(label, callback_data=f"setspeed:{val}"))
-        for i in range(0, len(btns), 3):
-            kb.add(*btns[i:i+3])
-    elif active == "text":
-        kb.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    # ничего не выводим для fixed/scroll/pingpong — только панель
+    btns = []
+    for emoji, val in colors:
+        text = f"{emoji}✅" if val == current_bg else emoji
+        btns.append(InlineKeyboardButton(text, callback_data=f"setbg:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
+    # Анимации отдельной строкой
+    btns_anim = []
+    for title, val in anims:
+        text = f"{title}✅" if val == current_bg else title
+        btns_anim.append(InlineKeyboardButton(text, callback_data=f"setbg:{val}"))
+    for i in range(0, len(btns_anim), 3):
+        kb.row(*btns_anim[i:i+3])
+    return kb
 
-    # 2. Панель категорий внизу
-    for row in panel_keyboard(user_id):
-        kb.add(*row)
+def text_color_keyboard(current_color):
+    colors = [
+        ("⚪", "white"),    ("⚫", "black"),    ("🔴", "red"),
+        ("🔵", "blue"),     ("🟢", "green"),   ("🟡", "yellow"),
+        ("🟠", "orange"),   ("🟣", "purple"),  ("🟤", "brown"),
+        ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown")
+    ]
+    kb = InlineKeyboardMarkup(row_width=3)
+    btns = []
+    for emoji, val in colors:
+        text = f"{emoji}✅" if val == current_color else emoji
+        btns.append(InlineKeyboardButton(text, callback_data=f"setcolor:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
+    return kb
+
+def size_keyboard(current_size):
+    sizes = [("70", "70"), ("80", "80"), ("90", "90"),
+             ("100", "100"), ("110", "110"), ("120", "120")]
+    kb = InlineKeyboardMarkup(row_width=3)
+    btns = []
+    for name, val in sizes:
+        text = f"{name}✅" if val == current_size else name
+        btns.append(InlineKeyboardButton(text, callback_data=f"setsize:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
+    return kb
+
+def speed_keyboard(current_speed):
+    speeds = [
+        ("🐢1", "1"), ("2", "2"), ("3", "3"),
+        ("4", "4"), ("5", "5"), ("6", "6"),
+        ("7", "7"), ("8", "8"), ("⚡️9", "9")
+    ]
+    kb = InlineKeyboardMarkup(row_width=3)
+    btns = []
+    for name, val in speeds:
+        text = f"{name}✅" if val == current_speed else name
+        btns.append(InlineKeyboardButton(text, callback_data=f"setspeed:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
+    return kb
+
+def direction_keyboard(current_direction):
+    options = [
+        ("📌 Закрепить", "fixed"),
+        ("▶️ Бегущая строка", "left"),
+        ("🏓 Пинг-понг", "pingpong")
+    ]
+    kb = InlineKeyboardMarkup(row_width=3)
+    for title, value in options:
+        text = f"{title}✅" if value == current_direction else title
+        kb.add(InlineKeyboardButton(text, callback_data=f"setdirection:{value}"))
+    return kb
+
+def settings_keyboard(category):
+    kb = menu_inline_keyboard(active=category)
+    if category == "bg":
+        for row in bg_color_keyboard(latest_command["bg"]).keyboard:
+            kb.keyboard.append(row)
+    elif category == "color":
+        for row in text_color_keyboard(latest_command["color"]).keyboard:
+            kb.keyboard.append(row)
+    elif category == "size":
+        for row in size_keyboard(latest_command["size"]).keyboard:
+            kb.keyboard.append(row)
+    elif category == "speed":
+        for row in speed_keyboard(latest_command["speed"]).keyboard:
+            kb.keyboard.append(row)
+    if category in ["bg", "color", "size", "speed"]:
+        for row in direction_keyboard(latest_command["direction"]).keyboard:
+            kb.keyboard.append(row)
     return kb
 
 @bot.message_handler(commands=['start'])
 def on_start(msg):
-    set_active_category(msg.from_user.id, "bg")
     bot.send_message(
         msg.chat.id,
-        "Добро пожаловать! Выберите настройку:",
-        reply_markup=make_keyboard(msg.from_user.id)
+        "Добро пожаловать! Настройте бегущую строку через меню.",
+        reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню"))
     )
 
 @bot.message_handler(func=lambda m: m.text == "Меню")
-def show_menu(msg):
-    set_active_category(msg.from_user.id, "bg")
+def show_main_menu(msg):
     bot.send_message(
         msg.chat.id,
-        "Меню настроек:",
-        reply_markup=make_keyboard(msg.from_user.id)
+        "Настройте отображение бегущей строки:",
+        reply_markup=settings_keyboard("bg")
     )
 
-@bot.callback_query_handler(lambda c: c.data.startswith("cat:"))
-def change_category(c):
-    cat = c.data.split(":")[1]
-    set_active_category(c.from_user.id, cat)
+@bot.callback_query_handler(lambda c: c.data.startswith("show_"))
+def menu_nav_callback(c):
+    cat = c.data[5:]
+    kb = settings_keyboard(cat)
+    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id)
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=make_keyboard(c.from_user.id))
-
-@bot.callback_query_handler(lambda c: c.data.startswith("setbg:"))
-def cb_set_bg(c):
-    bg = c.data.split(":",1)[1]
-    latest_command["bg"] = bg
-    set_active_category(c.from_user.id, "bg")
-    bot.answer_callback_query(c.id, f"Фон обновлён")
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=make_keyboard(c.from_user.id))
-
-@bot.callback_query_handler(lambda c: c.data.startswith("setcolor:"))
-def cb_set_color(c):
-    latest_command["color"] = c.data.split(":",1)[1]
-    set_active_category(c.from_user.id, "color")
-    bot.answer_callback_query(c.id, "Цвет текста обновлён!")
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=make_keyboard(c.from_user.id))
-
-@bot.callback_query_handler(lambda c: c.data.startswith("setsize:"))
-def cb_set_size(c):
-    latest_command["size"] = c.data.split(":",1)[1]
-    set_active_category(c.from_user.id, "size")
-    bot.answer_callback_query(c.id, "Размер шрифта обновлён!")
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=make_keyboard(c.from_user.id))
-
-@bot.callback_query_handler(lambda c: c.data.startswith("setspeed:"))
-def cb_set_speed(c):
-    latest_command["speed"] = c.data.split(":",1)[1]
-    set_active_category(c.from_user.id, "speed")
-    bot.answer_callback_query(c.id, "Скорость обновлена!")
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=make_keyboard(c.from_user.id))
 
 @bot.callback_query_handler(lambda c: c.data == "edit_text")
 def cb_edit_text(c):
@@ -191,60 +180,76 @@ def cb_edit_text(c):
         "Отправьте новый текст для бегущей строки (можно использовать переносы строк):"
     )
 
-@bot.callback_query_handler(lambda c: c.data in ["set_fixed", "set_scroll", "set_pingpong"])
-def cb_set_mode(c):
-    mode = c.data.replace("set_", "")
-    if mode == "fixed":
-        latest_command["direction"] = "fixed"
-    elif mode == "scroll":
-        latest_command["direction"] = "left"
-    elif mode == "pingpong":
-        latest_command["direction"] = "pingpong"
-    set_active_category(c.from_user.id, mode)
+@bot.callback_query_handler(lambda c: c.data.startswith("setbg:"))
+def cb_set_bg(c):
+    latest_command["bg"] = c.data.split(":",1)[1]
+    kb = settings_keyboard("bg")
+    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
+    bot.answer_callback_query(c.id, "Фон обновлён!")
+
+@bot.callback_query_handler(lambda c: c.data.startswith("setcolor:"))
+def cb_set_color(c):
+    latest_command["color"] = c.data.split(":",1)[1]
+    kb = settings_keyboard("color")
+    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
+    bot.answer_callback_query(c.id, "Цвет текста обновлён!")
+
+@bot.callback_query_handler(lambda c: c.data.startswith("setsize:"))
+def cb_set_size(c):
+    latest_command["size"] = c.data.split(":",1)[1]
+    kb = settings_keyboard("size")
+    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
+    bot.answer_callback_query(c.id, "Размер шрифта обновлён!")
+
+@bot.callback_query_handler(lambda c: c.data.startswith("setspeed:"))
+def cb_set_speed(c):
+    latest_command["speed"] = c.data.split(":",1)[1]
+    kb = settings_keyboard("speed")
+    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
+    bot.answer_callback_query(c.id, "Скорость обновлена!")
+
+@bot.callback_query_handler(lambda c: c.data.startswith("setdirection:"))
+def cb_set_direction(c):
+    latest_command["direction"] = c.data.split(":",1)[1]
+    kb = settings_keyboard("bg")
+    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Режим обновлён!")
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=make_keyboard(c.from_user.id))
 
 @bot.message_handler(func=lambda m: waiting_text.get(m.from_user.id, False))
 def handle_new_text(m):
     latest_command["text"] = m.text
     waiting_text[m.from_user.id] = False
-    set_active_category(m.from_user.id, "text")
     bot.reply_to(
         m,
         "Текст обновлён! Переносы строк учтены.",
-        reply_markup=make_keyboard(m.from_user.id)
+        reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню"))
     )
 
 @bot.message_handler(func=lambda m: True)
 def fallback(m):
     txt = m.text.strip()
     up = txt.upper()
-    user_id = m.from_user.id
     if up.startswith("ТЕКСТ:"):
         latest_command["text"] = txt[6:].strip()
-        set_active_category(user_id, "text")
-        bot.reply_to(m, "Текст обновлён!", reply_markup=make_keyboard(user_id))
+        bot.reply_to(m, "Текст обновлён!", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
     elif up.startswith("ФОН:"):
         latest_command["bg"] = txt[4:].strip()
-        set_active_category(user_id, "bg")
-        bot.reply_to(m, "Фон обновлён!", reply_markup=make_keyboard(user_id))
+        bot.reply_to(m, "Фон обновлён!", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
     elif up.startswith("ЦВЕТ:"):
         latest_command["color"] = txt[5:].strip()
-        set_active_category(user_id, "color")
-        bot.reply_to(m, "Цвет текста обновлён!", reply_markup=make_keyboard(user_id))
+        bot.reply_to(m, "Цвет текста обновлён!", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
     elif up.startswith("РАЗМЕР:"):
         try:
             latest_command["size"] = str(int(txt[7:].strip()))
-            set_active_category(user_id, "size")
-            bot.reply_to(m, "Размер шрифта обновлён!", reply_markup=make_keyboard(user_id))
+            bot.reply_to(m, "Размер шрифта обновлён!", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
         except:
-            bot.reply_to(m, "Ошибка: размер должен быть числом.", reply_markup=make_keyboard(user_id))
+            bot.reply_to(m, "Ошибка: размер должен быть числом.", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
     else:
         bot.reply_to(
             m,
-            "Используйте меню ниже или команды:\n"
+            "Используйте кнопку «Меню» или команды:\n"
             "ТЕКСТ: ..., ФОН: ..., ЦВЕТ: ..., РАЗМЕР: ...",
-            reply_markup=make_keyboard(user_id)
+            reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню"))
         )
 
 @app.route('/')

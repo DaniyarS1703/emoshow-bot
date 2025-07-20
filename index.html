@@ -32,40 +32,50 @@
       transition: color 0.2s, background 0.2s;
       pointer-events: none;
       text-align: center;
-      z-index: 2;
     }
-    #disco-bg, #disco-canvas, #luchi-bg {
-      position: fixed;
-      left: 0; top: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 0;
-      pointer-events: none;
+    /* Анимированные фоны */
+    body.bg-raduga {
+      background: linear-gradient(270deg, #ff00cc, #3333ff, #00ffcc, #ffff00, #ff00cc 60%);
+      background-size: 600% 600%;
+      animation: rainbow-bg 12s linear infinite;
     }
-    #bgstyle-label {
+    @keyframes rainbow-bg {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    body.bg-disco {
+      background: repeating-radial-gradient(circle at 30% 50%, #fff700, #ff00cc 10%, #00ffcc 20%, #fff700 30%);
+      animation: disco-bg 1.5s linear infinite;
+    }
+    @keyframes disco-bg {
+      0% { filter: hue-rotate(0deg);}
+      100% {filter: hue-rotate(360deg);}
+    }
+    body.bg-luchi {
+      background: repeating-conic-gradient(from 0deg, #fff700 0deg 20deg, #ff00cc 20deg 40deg, #00ffcc 40deg 60deg, #3333ff 60deg 80deg, #fff700 80deg 100deg);
+      animation: luchi-bg 6s linear infinite;
+    }
+    @keyframes luchi-bg {
+      0% {background-position: 0 0;}
+      100% {background-position: 400px 400px;}
+    }
+    body.bg-ogni {
+      background: #222;
+    }
+    #firefly {
       position: fixed;
-      top: 10px; left: 50%; z-index: 10;
-      transform: translateX(-50%);
-      color: #fff;
-      font-size: 22px;
-      padding: 5px 16px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 14px;
-      font-family: sans-serif;
+      border-radius: 50%;
       opacity: 0.8;
       pointer-events: none;
-      text-shadow: 0 1px 3px #000, 0 0 10px #fff4;
+      mix-blend-mode: screen;
+      z-index: 1;
     }
   </style>
 </head>
 <body>
-  <canvas id="disco-bg"></canvas>
-  <canvas id="disco-canvas"></canvas>
-  <div id="luchi-bg"></div>
   <div id="marquee-container">
     <div id="marquee">Загрузка...</div>
   </div>
-  <div id="bgstyle-label" style="display:none"></div>
 
   <script>
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
@@ -75,188 +85,52 @@
     let speedPxPerSec = 100;
     let lastDirection = null;
     let lastConfig = {};
-    let bgMode = "classic";
+    let bgEffect = "";
 
-    // Стили фонов
-    const BG_STYLES = {
-      "classic":      {name:"Обычный"},
-      "disco":        {name:"Диско"},
-      "raduga":       {name:"Радуга"},
-      "luchi":        {name:"Лучи"},
-      "ogni":         {name:"Огоньки"},
-      // classic — это обычный статичный цвет
-    };
-    function showBgStyleLabel(mode) {
-      const lbl = document.getElementById('bgstyle-label');
-      if (BG_STYLES[mode] && mode !== "classic") {
-        lbl.textContent = BG_STYLES[mode].name + " 🎉";
-        lbl.style.display = "";
-      } else {
-        lbl.style.display = "none";
+    // --- Огоньки
+    let fireflies = [];
+    function createFireflies() {
+      removeFireflies();
+      let num = 16;
+      for (let i = 0; i < num; i++) {
+        let f = document.createElement("div");
+        f.id = "firefly";
+        f.style.width = f.style.height = (Math.random()*10+10) + "px";
+        f.style.background = `radial-gradient(circle, #fff700 0%, #ff00cc 90%, transparent 100%)`;
+        f.style.left = Math.random()*window.innerWidth + "px";
+        f.style.top = Math.random()*window.innerHeight + "px";
+        f.style.opacity = Math.random()*0.4+0.3;
+        f.style.transition = "all 2s";
+        f.animate = function() {
+          f.style.left = Math.random()*window.innerWidth + "px";
+          f.style.top = Math.random()*window.innerHeight + "px";
+        };
+        document.body.appendChild(f);
+        fireflies.push(f);
+      }
+    }
+    function removeFireflies() {
+      for (let f of fireflies) document.body.removeChild(f);
+      fireflies = [];
+    }
+    function animateFireflies() {
+      for (let f of fireflies) f.animate();
+      setTimeout(animateFireflies, 2000);
+    }
+
+    function setBodyBgEffect(effect) {
+      document.body.classList.remove("bg-raduga","bg-disco","bg-luchi","bg-ogni");
+      removeFireflies();
+      if (effect === "raduga") document.body.classList.add("bg-raduga");
+      else if (effect === "disco") document.body.classList.add("bg-disco");
+      else if (effect === "luchi") document.body.classList.add("bg-luchi");
+      else if (effect === "ogni")  {
+        document.body.classList.add("bg-ogni");
+        createFireflies();
+        animateFireflies();
       }
     }
 
-    // —————————————————————————————
-    // ——— ФОНЫ —
-    // —————————————————————————————
-
-    // Радужный CSS-градиент
-    function setRadugaBg() {
-      document.body.style.background = "linear-gradient(120deg, #ff00cc, #3333ff, #00ffcc, #ffcc00, #ff3366, #ff00cc)";
-      document.body.style.backgroundSize = "400% 400%";
-      document.body.style.animation = "radugaGradient 10s linear infinite";
-      document.body.style.transition = "";
-      document.getElementById("disco-bg").style.display = "none";
-      document.getElementById("disco-canvas").style.display = "none";
-      document.getElementById("luchi-bg").style.display = "none";
-    }
-    // Диско — всплывающие цветные круги
-    function setDiscoBg() {
-      document.body.style.background = "#181825";
-      document.body.style.animation = "";
-      document.getElementById("disco-bg").style.display = "";
-      document.getElementById("disco-canvas").style.display = "none";
-      document.getElementById("luchi-bg").style.display = "none";
-    }
-    // Лучи/шахматка (CSS)
-    function setLuchiBg() {
-      document.body.style.background = "#000";
-      document.body.style.animation = "";
-      document.getElementById("disco-bg").style.display = "none";
-      document.getElementById("disco-canvas").style.display = "none";
-      document.getElementById("luchi-bg").style.display = "";
-    }
-    // Огоньки — движущиеся цветные круги (canvas)
-    function setOgniBg() {
-      document.body.style.background = "#212028";
-      document.body.style.animation = "";
-      document.getElementById("disco-bg").style.display = "none";
-      document.getElementById("disco-canvas").style.display = "";
-      document.getElementById("luchi-bg").style.display = "none";
-    }
-    // Классика — просто цвет (меняется отдельно)
-    function setClassicBg(bgColor) {
-      document.body.style.background = bgColor;
-      document.body.style.animation = "";
-      document.getElementById("disco-bg").style.display = "none";
-      document.getElementById("disco-canvas").style.display = "none";
-      document.getElementById("luchi-bg").style.display = "none";
-    }
-
-    // ——— DISCO (Canvas) ———
-    // Всплывающие круги ("диско-шар")
-    function runDiscoBubbles() {
-      const cvs = document.getElementById('disco-bg');
-      const ctx = cvs.getContext('2d');
-      function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
-      window.addEventListener('resize', resize); resize();
-      let balls = [];
-      function randColor() {
-        return 'hsl(' + (Math.random()*360) + ',100%,60%)';
-      }
-      function spawnBall() {
-        return {
-          x: Math.random()*cvs.width,
-          y: Math.random()*cvs.height,
-          r: 35+Math.random()*35,
-          dx: (Math.random()-0.5)*0.6,
-          dy: (Math.random()-0.5)*0.6,
-          a: 0,
-          c: randColor(),
-          life: Math.random()*2+2
-        }
-      }
-      for(let i=0;i<30;i++) balls.push(spawnBall());
-      function draw() {
-        ctx.clearRect(0,0,cvs.width,cvs.height);
-        for(const b of balls) {
-          ctx.globalAlpha = 0.5 + 0.5*Math.sin(b.a);
-          ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,2*Math.PI);
-          ctx.fillStyle = b.c; ctx.fill();
-          b.x += b.dx; b.y += b.dy;
-          b.a += 0.05 + Math.random()*0.02;
-          b.life -= 0.02;
-          if(b.life < 0) {
-            Object.assign(b, spawnBall());
-          }
-        }
-        requestAnimationFrame(draw);
-      }
-      draw();
-    }
-    runDiscoBubbles();
-
-    // ——— OGNIKI (Canvas) ———
-    // Двигающиеся цветные шары
-    function runOgniBalls() {
-      const cvs = document.getElementById('disco-canvas');
-      const ctx = cvs.getContext('2d');
-      function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
-      window.addEventListener('resize', resize); resize();
-      let balls = [];
-      for(let i=0;i<24;i++) balls.push({
-        x:Math.random()*cvs.width,
-        y:Math.random()*cvs.height,
-        r:30+Math.random()*30,
-        dx:1+Math.random()*2, dy:1+Math.random()*2,
-        c:'hsl('+Math.random()*360+',100%,65%)'
-      });
-      function draw() {
-        ctx.clearRect(0,0,cvs.width,cvs.height);
-        for(const b of balls) {
-          ctx.globalAlpha = 0.27;
-          ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,2*Math.PI);
-          ctx.fillStyle = b.c; ctx.fill();
-          b.x += b.dx; b.y += b.dy;
-          if(b.x<0||b.x>cvs.width) b.dx*=-1;
-          if(b.y<0||b.y>cvs.height) b.dy*=-1;
-        }
-        requestAnimationFrame(draw);
-      }
-      draw();
-    }
-    runOgniBalls();
-
-    // ——— LUCHI ———
-    // Лучи на фоне через div с градиентом + CSS-анимация
-    const luchiDiv = document.getElementById('luchi-bg');
-    luchiDiv.style.position = 'fixed';
-    luchiDiv.style.top = '0'; luchiDiv.style.left = '0';
-    luchiDiv.style.width = '100vw'; luchiDiv.style.height = '100vh';
-    luchiDiv.style.zIndex = '0';
-    luchiDiv.style.pointerEvents = 'none';
-    luchiDiv.style.background = 'repeating-conic-gradient(from 0deg at 50% 50%, #fff 0% 2%, #f0c 4% 7%, #333 8% 12%, transparent 14% 20%)';
-    luchiDiv.style.opacity = 0.18;
-    luchiDiv.animate([
-      {transform:'rotate(0deg)'},
-      {transform:'rotate(360deg)'}
-    ], {duration:17000, iterations:Infinity});
-
-    // ——— CSS Animation for RADUGA ———
-    let gradCSS = document.createElement('style');
-    gradCSS.innerHTML = `
-      @keyframes radugaGradient {
-        0% {background-position:0% 50%}
-        50% {background-position:100% 50%}
-        100% {background-position:0% 50%}
-      }
-    `;
-    document.head.appendChild(gradCSS);
-
-    // ————————————————————————————
-    // Логика смены стиля фона
-    function switchBg(mode, bgColor) {
-      bgMode = mode;
-      showBgStyleLabel(mode);
-      if(mode === "disco") setDiscoBg();
-      else if(mode === "raduga") setRadugaBg();
-      else if(mode === "luchi") setLuchiBg();
-      else if(mode === "ogni") setOgniBg();
-      else setClassicBg(bgColor);
-    }
-
-    // ————————————————————————————
-    // Бегущая строка (как раньше)
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
       const elapsed = (timestamp - animate.last) / 1000;
@@ -320,12 +194,14 @@
         marquee.style.top = posY + "px";
         marquee.style.transform = "none";
       }
+
       requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
       let needReset = false;
       let needUpdateText = false;
+      // Если поменялось направление или размер — сбрасываем физику.
       if (
         lastConfig.direction !== data.direction ||
         lastConfig.size !== data.size
@@ -344,17 +220,21 @@
 
       if (needUpdateText) marquee.textContent = data.text;
       marquee.style.color = data.color;
+
+      // Анимированные фоны
+      if (["raduga","disco","luchi","ogni"].includes(data.bg)) {
+        setBodyBgEffect(data.bg);
+        bgEffect = data.bg;
+      } else {
+        document.body.style.backgroundColor = data.bg;
+        if (bgEffect) setBodyBgEffect(""); // убрать эффект если был
+        bgEffect = "";
+      }
+
       marquee.style.fontSize = data.size + "px";
       direction = data.direction || "left";
 
-      // Определяем стиль фона по значению
-      let bg = (data.bg||"").toLowerCase();
-      if(["disco","raduga","luchi","ogni"].includes(bg)) {
-        switchBg(bg);
-      } else {
-        switchBg("classic", data.bg);
-      }
-      // Скорость
+      // Скорость: перевод из 1-9 в 100-600 px/s
       const minSpeedPx = 100, maxSpeedPx = 600;
       let speed = Number(data.speed);
       speed = Math.min(Math.max(speed, 1), 9);
@@ -393,7 +273,6 @@
     requestAnimationFrame(animate);
     setInterval(fetchData, 5000);
     fetchData();
-
   </script>
 </body>
 </html>
