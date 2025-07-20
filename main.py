@@ -51,9 +51,12 @@ def bg_color_keyboard(current_bg):
         ("🟧", "orange"), ("🟪", "purple"), ("🟫", "brown")
     ]
     kb = InlineKeyboardMarkup(row_width=3)
+    btns = []
     for emoji, val in colors:
         text = f"{emoji}✅" if val == current_bg else emoji
-        kb.add(InlineKeyboardButton(text, callback_data=f"setbg:{val}"))
+        btns.append(InlineKeyboardButton(text, callback_data=f"setbg:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
     return kb
 
 def text_color_keyboard(current_color):
@@ -63,9 +66,12 @@ def text_color_keyboard(current_color):
         ("🟠", "orange"), ("🟣", "purple"), ("🟤", "brown")
     ]
     kb = InlineKeyboardMarkup(row_width=3)
+    btns = []
     for emoji, val in colors:
         text = f"{emoji}✅" if val == current_color else emoji
-        kb.add(InlineKeyboardButton(text, callback_data=f"setcolor:{val}"))
+        btns.append(InlineKeyboardButton(text, callback_data=f"setcolor:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
     return kb
 
 def size_keyboard(current_size):
@@ -80,7 +86,6 @@ def speed_keyboard(current_speed):
     speeds = [("🐢1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("⚡️5", "5")]
     kb = InlineKeyboardMarkup(row_width=3)
     for name, val in speeds:
-        base = name if not name.startswith("🐢") and not name.startswith("⚡️") else name[1:]
         text = f"{name}✅" if val == current_speed else name
         kb.add(InlineKeyboardButton(text, callback_data=f"setspeed:{val}"))
     return kb
@@ -175,9 +180,6 @@ def cb_set_speed(c):
 @bot.callback_query_handler(lambda c: c.data.startswith("setdirection:"))
 def cb_set_direction(c):
     latest_command["direction"] = c.data.split(":",1)[1]
-    # Вернуться к текущей выбранной категории (например, speed/bg/size)
-    # Можно передавать "speed" или "bg" или хранить последнее выбранное
-    # Для простоты возвращаемся к "bg"
     kb = settings_keyboard("bg")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Режим обновлён!")
@@ -218,33 +220,3 @@ def fallback(m):
         try:
             latest_command["size"] = str(int(txt[7:].strip()))
             bot.reply_to(m, "Размер шрифта обновлён!", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
-        except:
-            bot.reply_to(m, "Ошибка: размер должен быть числом.", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
-    else:
-        bot.reply_to(
-            m,
-            "Используйте кнопку «Меню» или команды:\n"
-            "ТЕКСТ: ..., ФОН: ..., ЦВЕТ: ..., РАЗМЕР: ...",
-            reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню"))
-        )
-
-@app.route('/')
-def root():
-    return redirect("https://daniyars1703.github.io/emoshow-bot/")
-
-@app.route('/api/latest', methods=['GET'])
-def api_latest():
-    if request.args.get('apikey') != API_KEY:
-        return jsonify({"error": "unauthorized"}), 403
-    return jsonify(latest_command)
-
-@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
-def telegram_webhook():
-    update = telebot.types.Update.de_json(request.get_data().decode('utf-8'))
-    bot.process_new_updates([update])
-    return '', 200
-
-if __name__ == '__main__':
-    bot.remove_webhook()
-    bot.set_webhook(url=f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}")
-    app.run(host='0.0.0.0', port=PORT)
