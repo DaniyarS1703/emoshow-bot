@@ -25,13 +25,12 @@
     #marquee {
       position: absolute;
       top: 50%;
-      white-space: pre-line; /* Позволяет переносы строк */
-      transform: translateY(-50%) translateX(100%);
-      will-change: transform;
       left: 0;
-      right: 0;
-      margin: 0 auto;
+      margin: 0;
       text-align: center;
+      white-space: pre-line;
+      will-change: transform;
+      transform: translateY(-50%) translateX(100%);
       transition: transform 0.2s;
     }
     .fixed {
@@ -61,15 +60,16 @@
 
       if (!animate.last) {
         animate.last = timestamp;
-        posX = marquee.parentElement.offsetWidth; // начинаем справа вне экрана
+        posX = marquee.parentElement.offsetWidth;
+        marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
       }
       const elapsed = (timestamp - animate.last) / 1000;
       animate.last = timestamp;
 
       posX -= speedPxPerSec * elapsed;
-      const textWidth = marquee.offsetWidth;
+      const textWidth = marquee.scrollWidth; // ВАЖНО! scrollWidth — полная ширина текста
 
-      // Строка уходит полностью влево, появляется снова справа
+      // Текст уходит полностью за край — только тогда появляется снова
       if (posX < -textWidth) {
         posX = marquee.parentElement.offsetWidth;
       }
@@ -95,22 +95,18 @@
     }
 
     function updateMarquee(data) {
-      // Поддержка переносов строк
-      marquee.textContent = ""; // сбрасываем старое
       marquee.innerHTML = data.text.replace(/\n/g, "<br>");
-
       marquee.style.color = data.color;
       document.body.style.backgroundColor = data.bg;
       marquee.style.fontSize = data.size + "px";
 
-      // Скорость
+      // скорость
       const minSpeedPx = 100;
       const maxSpeedPx = 600;
       let speed = Number(data.speed);
       speed = Math.min(Math.max(speed, 1), 10);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
-      // Режимы: бегущая строка и фиксированный
       if (data.direction === "fixed") {
         stopAndFix();
       } else {
@@ -131,12 +127,9 @@
       }
     }
 
-    // Старт анимации
-    startScroll();
-
-    // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
+    startScroll();
   </script>
 </body>
 </html>
