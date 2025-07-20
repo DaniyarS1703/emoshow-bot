@@ -20,22 +20,23 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     #marquee {
       position: absolute;
-      top: 50%;
-      left: 0;
-      margin: 0;
-      text-align: center;
       white-space: pre-line;
+      word-break: break-word;
+      text-align: center;
       will-change: transform;
-      transform: translateY(-50%) translateX(100%);
-      transition: none;
+      transform: translate(-50%, -50%);
+      left: 50%;
+      top: 50%;
     }
     .fixed {
       left: 50% !important;
-      right: auto !important;
+      top: 50% !important;
       margin: 0;
       transform: translate(-50%, -50%) !important;
     }
@@ -45,38 +46,90 @@
   <div id="marquee-container">
     <div id="marquee">Загрузка...</div>
   </div>
-
   <script>
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
-
     let speedPxPerSec = 100;
-    let posX;
+    let posX, posY, vx, vy;
     let lastDirection = "left";
     let animateId = null;
     let lastData = {};
+    // параметры для пинг-понга
+    let pingpongActive = false;
+    let containerW = 0, containerH = 0, textW = 0, textH = 0;
 
     function animate(timestamp) {
       if (lastDirection === "fixed") return;
+      if (lastDirection === "pingpong" && !pingpongActive) return;
 
-      if (!animate.last) {
+      if (lastDirection === "pingpong") {
+        // обновляем размеры, если изменился текст или размер
+        containerW = marquee.parentElement.offsetWidth;
+        containerH = marquee.parentElement.offsetHeight;
+        textW = marquee.offsetWidth;
+        textH = marquee.offsetHeight;
+
+        if (!animate.last) {
+          animate.last = timestamp;
+        }
+        const elapsed = (timestamp - animate.last) / 1000;
         animate.last = timestamp;
-        // Начальная позиция — ровно за правым краем контейнера:
-        posX = marquee.parentElement.offsetWidth;
+
+        posX += vx * elapsed;
+        posY += vy * elapsed;
+
+        // отскок по горизонтали
+        if (posX < 0) { posX = 0; vx = Math.abs(vx); }
+        if (posX + textW > containerW) { posX = containerW - textW; vx = -Math.abs(vx); }
+        // отскок по вертикали
+        if (posY < 0) { posY = 0; vy = Math.abs(vy); }
+        if (posY + textH > containerH) { posY = containerH - textH; vy = -Math.abs(vy); }
+
+        marquee.style.transform = `translate(0, 0) translate(${posX}px, ${posY}px)`;
+        animateId = requestAnimationFrame(animate);
+      } else {
+        // классическая бегущая строка
+        if (!animate.last) {
+          animate.last = timestamp;
+          posX = marquee.parentElement.offsetWidth;
+        }
+        const elapsed = (timestamp - animate.last) / 1000;
+        animate.last = timestamp;
+
+        posX -= speedPxPerSec * elapsed;
+        const textWidth = marquee.scrollWidth;
+
+        if (posX < -textWidth) {
+          posX = marquee.parentElement.offsetWidth;
+        }
+
         marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+        animateId = requestAnimationFrame(animate);
       }
-      const elapsed = (timestamp - animate.last) / 1000;
-      animate.last = timestamp;
+    }
 
-      posX -= speedPxPerSec * elapsed;
-      const textWidth = marquee.scrollWidth;
+    function startPingpong() {
+      if (animateId) cancelAnimationFrame(animateId);
+      marquee.classList.remove("fixed");
+      pingpongActive = true;
+      animate.last = undefined;
 
-      // Когда текст полностью ушёл за левый край — возвращаем его опять за правый край
-      if (posX < -textWidth) {
-        posX = marquee.parentElement.offsetWidth;
-      }
+      // начальные размеры
+      containerW = marquee.parentElement.offsetWidth;
+      containerH = marquee.parentElement.offsetHeight;
+      textW = marquee.offsetWidth;
+      textH = marquee.offsetHeight;
 
-      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      // старт из центра экрана
+      posX = (containerW - textW) / 2;
+      posY = (containerH - textH) / 2;
+
+      // угол случайный (20-40°), случайная сторона
+      let angle = (Math.random() < 0.5 ? -1 : 1) * (20 + Math.random() * 20) * Math.PI / 180;
+      let v = speedPxPerSec;
+      vx = Math.cos(angle) * v;
+      vy = Math.sin(angle) * v;
+
       animateId = requestAnimationFrame(animate);
     }
 
@@ -84,14 +137,16 @@
       if (animateId) cancelAnimationFrame(animateId);
       animateId = null;
       animate.last = undefined;
+      pingpongActive = false;
       marquee.classList.add("fixed");
       marquee.style.transform = "translate(-50%, -50%)";
       posX = undefined;
     }
 
     function startScroll(resetPos = false) {
-      marquee.classList.remove("fixed");
       if (animateId) cancelAnimationFrame(animateId);
+      marquee.classList.remove("fixed");
+      pingpongActive = false;
       animate.last = undefined;
       if (resetPos) posX = undefined;
       animateId = requestAnimationFrame(animate);
@@ -121,11 +176,12 @@
       if (!isSameData(data, lastData)) {
         if (data.direction === "fixed") {
           stopAndFix();
+        } else if (data.direction === "pingpong") {
+          startPingpong();
         } else {
-          startScroll(true); // сбросим позицию за правый край
+          startScroll(true); // бегущая строка
         }
       } else {
-        // даже если ничего не поменялось, просто обновим цвета/фон
         if (data.direction === "fixed") {
           stopAndFix();
         }
@@ -150,7 +206,6 @@
     setInterval(fetchData, 5000);
     fetchData();
     startScroll(true);
-
   </script>
 </body>
 </html>
