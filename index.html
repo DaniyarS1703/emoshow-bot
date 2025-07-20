@@ -31,7 +31,7 @@
       will-change: transform;
       transition: color 0.2s, background 0.2s;
       pointer-events: none;
-      text-align: center;  /* Центрируем текст для многострочного режима */
+      text-align: center;
     }
   </style>
 </head>
@@ -95,7 +95,6 @@
           const cont = marquee.parentElement;
           posX = 0;
           posY = 0;
-          // Случайный угол 30..60 градусов (в радианах)
           let angle = (Math.random() * 30 + 30) * Math.PI / 180;
           if (Math.random() < 0.5) angle = Math.PI - angle;
           velX = Math.cos(angle) * speedPxPerSec;
@@ -121,7 +120,28 @@
     }
 
     function updateMarquee(data) {
-      marquee.textContent = data.text;
+      let needReset = false;
+      let needUpdateText = false;
+      // Если поменялось направление или размер — сбрасываем физику.
+      if (
+        lastConfig.direction !== data.direction ||
+        lastConfig.size !== data.size
+      ) {
+        needReset = true;
+      }
+      // Меняем текст только если он реально другой!
+      if (lastConfig.text !== data.text) {
+        needReset = true;
+        needUpdateText = true;
+      }
+      // (сохраняем новые значения)
+      lastConfig = {
+        direction: data.direction,
+        text: data.text,
+        size: data.size
+      };
+
+      if (needUpdateText) marquee.textContent = data.text;
       marquee.style.color = data.color;
       document.body.style.backgroundColor = data.bg;
       marquee.style.fontSize = data.size + "px";
@@ -132,21 +152,6 @@
       let speed = Number(data.speed);
       speed = Math.min(Math.max(speed, 1), 9);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 8;
-
-      // Сбрасывать позицию только если что-то реально поменялось
-      let needReset = false;
-      if (
-        lastConfig.direction !== direction ||
-        lastConfig.text !== data.text ||
-        lastConfig.size !== data.size
-      ) {
-        needReset = true;
-      }
-      lastConfig = {
-        direction,
-        text: data.text,
-        size: data.size
-      };
 
       if (direction === "fixed") {
         marquee.style.position = "absolute";
@@ -161,7 +166,6 @@
         marquee.style.top = "50%";
       }
 
-      // Только если реально что-то поменялось — сбрасываем!
       if (needReset) {
         lastDirection = null;
         posX = posY = undefined;
