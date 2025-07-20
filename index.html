@@ -25,9 +25,18 @@
     #marquee {
       position: absolute;
       top: 50%;
-      white-space: nowrap;
+      white-space: pre-line; /* Изменено: поддержка переносов строк */
       transform: translateY(-50%) translateX(100%);
       will-change: transform;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .fixed {
+      left: 50%;
+      transform: translate(-50%, -50%) !important;
+      /* Центрируем и останавливаем */
     }
   </style>
 </head>
@@ -42,46 +51,56 @@
 
     // Скорость: пикселей в секунду (будем пересчитывать из speed из API)
     let speedPxPerSec = 100; 
-
     let posX; // текущая позиция текста
+    let lastDirection = "left"; // Для отслеживания смены режима
 
-    // Обновить позицию по времени
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
       if (posX === undefined) {
-        posX = marquee.parentElement.offsetWidth; // начинаем справа вне экрана
-      }
-      const elapsed = (timestamp - animate.last) / 1000; // сек
-      animate.last = timestamp;
-
-      posX -= speedPxPerSec * elapsed; // сдвигаем влево
-
-      const textWidth = marquee.offsetWidth;
-
-      // Если текст полностью ушёл влево за пределы - сбрасываем позицию
-      if (posX < -textWidth) {
         posX = marquee.parentElement.offsetWidth;
       }
+      const elapsed = (timestamp - animate.last) / 1000;
+      animate.last = timestamp;
 
-      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
-
+      // Бегущая строка только если НЕ "fixed"
+      if (lastDirection !== "fixed") {
+        posX -= speedPxPerSec * elapsed;
+        const textWidth = marquee.offsetWidth;
+        if (posX < -textWidth) {
+          posX = marquee.parentElement.offsetWidth;
+        }
+        marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      }
       requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
-      marquee.textContent = data.text;
+      // Сохраняем переносы строк
+      marquee.innerHTML = data.text.replace(/\n/g, "<br>");
       marquee.style.color = data.color;
       document.body.style.backgroundColor = data.bg;
       marquee.style.fontSize = data.size + "px";
 
-      // Переводим скорость из 1-10 в пикселей в секунду, например:
-      // max speed 600px/s, min speed 100px/s (можно менять)
+      // Скорость
       const minSpeedPx = 100;
       const maxSpeedPx = 600;
       let speed = Number(data.speed);
       speed = Math.min(Math.max(speed, 1), 10);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
+      // Direction logic
+      if (data.direction === "fixed") {
+        marquee.classList.add("fixed");
+        marquee.style.transform = "translate(-50%, -50%)";
+        posX = undefined;
+      } else {
+        marquee.classList.remove("fixed");
+        // Сбросим posX только если меняется режим
+        if (lastDirection !== data.direction) {
+          posX = marquee.parentElement.offsetWidth;
+        }
+      }
+      lastDirection = data.direction;
       marquee.style.opacity = 1;
     }
 
@@ -102,7 +121,6 @@
     // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
-
   </script>
 </body>
 </html>

@@ -54,7 +54,7 @@ def bg_keyboard():
     kb.add(InlineKeyboardButton("✏️ Изменить текст", callback_data="edit_text"))
     kb.add(
         InlineKeyboardButton("🐇 Скорость", callback_data="show_speed"),
-        InlineKeyboardButton("➡️ Направление", callback_data="show_dir")
+        InlineKeyboardButton("📌 Закрепить", callback_data="set_fixed")
     )
     return kb
 
@@ -77,12 +77,6 @@ def speed_keyboard():
     kb = InlineKeyboardMarkup(row_width=3)
     for name, val in [("🐢1","1"),("2","2"),("3","3"),("4","4"),("⚡️5","5")]:
         kb.add(InlineKeyboardButton(name, callback_data=f"setspeed:{val}"))
-    return kb
-
-def dir_keyboard():
-    kb = InlineKeyboardMarkup(row_width=2)
-    for name, val in [("⬅️","left"),("➡️","right")]:
-        kb.add(InlineKeyboardButton(name, callback_data=f"setdir:{val}"))
     return kb
 
 # ——————————————————————
@@ -131,14 +125,10 @@ def cb_show_speed(c):
         reply_markup=speed_keyboard()
     )
 
-@bot.callback_query_handler(lambda c: c.data == "show_dir")
-def cb_show_dir(c):
-    bot.answer_callback_query(c.id)
-    bot.send_message(
-        c.message.chat.id,
-        "Выберите направление:",
-        reply_markup=dir_keyboard()
-    )
+@bot.callback_query_handler(lambda c: c.data == "set_fixed")
+def cb_set_fixed(c):
+    latest_command["direction"] = "fixed"
+    bot.answer_callback_query(c.id, "Текст закреплён по центру!")
 
 @bot.callback_query_handler(lambda c: c.data == "show_bg")
 def cb_show_bg(c):
@@ -169,27 +159,22 @@ def cb_set_speed(c):
     latest_command["speed"] = c.data.split(":",1)[1]
     bot.answer_callback_query(c.id, "Скорость обновлена!")
 
-@bot.callback_query_handler(lambda c: c.data.startswith("setdir:"))
-def cb_set_dir(c):
-    latest_command["direction"] = c.data.split(":",1)[1]
-    bot.answer_callback_query(c.id, "Направление обновлено!")
-
 @bot.callback_query_handler(lambda c: c.data == "edit_text")
 def cb_edit_text(c):
     waiting_text[c.from_user.id] = True
     bot.answer_callback_query(c.id, "Введите новый текст")
     bot.send_message(
         c.message.chat.id,
-        "Отправьте новый текст для бегущей строки:"
+        "Отправьте новый текст для бегущей строки (можно использовать переносы строк):"
     )
 
 @bot.message_handler(func=lambda m: waiting_text.get(m.from_user.id, False))
 def handle_new_text(m):
-    latest_command["text"] = m.text.strip()
+    latest_command["text"] = m.text
     waiting_text[m.from_user.id] = False
     bot.reply_to(
         m,
-        "Текст обновлён!",
+        "Текст обновлён! Переносы строк учтены.",
         reply_markup=menu_keyboard()
     )
 
