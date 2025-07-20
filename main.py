@@ -28,7 +28,7 @@ app = Flask(__name__)
 CORS(app)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-# Remove any webhook and drop pending updates to avoid 409 conflicts
+# сбрасываем вебхук и накопившиеся обновления, чтобы избежать 409‑й ошибки
 bot.delete_webhook(drop_pending_updates=True)
 
 # === Global state ===
@@ -179,7 +179,7 @@ def show_main_menu(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setbg:"))
 def callback_set_bg(call):
-    color = call.data.split(":", 1)[1]
+    color = call.data.split(":",1)[1]
     latest_command["bg"] = color
     bot.answer_callback_query(call.id, "Фон сменён!")
     bot.edit_message_text(
@@ -231,9 +231,9 @@ def show_direction(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setcolor:"))
 def callback_set_color(call):
-    color = call.data.split(":", 1)[1]
+    color = call.data.split(":",1)[1]
     latest_command["color"] = color
-    bot.answer_callback_query(call.id, f"Цвет текста обновлён!")
+    bot.answer_callback_query(call.id, "Цвет текста обновлён!")
     bot.edit_message_text(
         "Измените цвет текста:",
         call.message.chat.id,
@@ -243,9 +243,9 @@ def callback_set_color(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setsize:"))
 def callback_set_size(call):
-    size = call.data.split(":", 1)[1]
+    size = call.data.split(":",1)[1]
     latest_command["size"] = size
-    bot.answer_callback_query(call.id, f"Размер шрифта обновлён!")
+    bot.answer_callback_query(call.id, "Размер шрифта обновлён!")
     bot.edit_message_text(
         "Измените размер шрифта:",
         call.message.chat.id,
@@ -255,9 +255,9 @@ def callback_set_size(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setspeed:"))
 def callback_set_speed(call):
-    speed = call.data.split(":", 1)[1]
+    speed = call.data.split(":",1)[1]
     latest_command["speed"] = speed
-    bot.answer_callback_query(call.id, f"Скорость обновлена!")
+    bot.answer_callback_query(call.id, "Скорость обновлена!")
     bot.edit_message_text(
         "Измените скорость:",
         call.message.chat.id,
@@ -267,7 +267,7 @@ def callback_set_speed(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setdirection:"))
 def callback_set_direction(call):
-    mode = call.data.split(":", 1)[1]
+    mode = call.data.split(":",1)[1]
     latest_command["direction"] = mode
     bot.answer_callback_query(call.id, "Направление обновлено!")
     bot.edit_message_text(
