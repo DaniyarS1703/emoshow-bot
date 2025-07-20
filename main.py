@@ -220,3 +220,33 @@ def fallback(m):
         try:
             latest_command["size"] = str(int(txt[7:].strip()))
             bot.reply_to(m, "Размер шрифта обновлён!", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
+        except:
+            bot.reply_to(m, "Ошибка: размер должен быть числом.", reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню")))
+    else:
+        bot.reply_to(
+            m,
+            "Используйте кнопку «Меню» или команды:\n"
+            "ТЕКСТ: ..., ФОН: ..., ЦВЕТ: ..., РАЗМЕР: ...",
+            reply_markup=ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("Меню"))
+        )
+
+@app.route('/')
+def root():
+    return redirect("https://daniyars1703.github.io/emoshow-bot/")
+
+@app.route('/api/latest', methods=['GET'])
+def api_latest():
+    if request.args.get('apikey') != API_KEY:
+        return jsonify({"error": "unauthorized"}), 403
+    return jsonify(latest_command)
+
+@app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
+def telegram_webhook():
+    update = telebot.types.Update.de_json(request.get_data().decode('utf-8'))
+    bot.process_new_updates([update])
+    return '', 200
+
+if __name__ == '__main__':
+    bot.remove_webhook()
+    bot.set_webhook(url=f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}")
+    app.run(host='0.0.0.0', port=PORT)
