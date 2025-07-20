@@ -43,32 +43,44 @@
       0% { background-position: 0% 50%; }
       100% { background-position: 100% 50%; }
     }
-    body.bg-disco {
-      background: repeating-radial-gradient(circle at 30% 50%, #fff700, #ff00cc 10%, #00ffcc 20%, #fff700 30%);
-      animation: disco-bg 1.5s linear infinite;
-    }
-    @keyframes disco-bg {
-      0% { filter: hue-rotate(0deg);}
-      100% {filter: hue-rotate(360deg);}
-    }
-    body.bg-luchi {
-      background: repeating-conic-gradient(from 0deg, #fff700 0deg 20deg, #ff00cc 20deg 40deg, #00ffcc 40deg 60deg, #3333ff 60deg 80deg, #fff700 80deg 100deg);
-      animation: luchi-bg 6s linear infinite;
-    }
-    @keyframes luchi-bg {
-      0% {background-position: 0 0;}
-      100% {background-position: 400px 400px;}
-    }
-    body.bg-ogni {
-      background: #222;
-    }
-    #firefly {
+    /* ДИСКО — динамичные пятна/круги */
+    .disco-spot {
       position: fixed;
       border-radius: 50%;
-      opacity: 0.8;
+      pointer-events: none;
+      opacity: 0.65;
+      mix-blend-mode: lighten;
+      transition: filter 0.4s;
+      z-index: 1;
+      animation: disco-spot-fade 2.5s infinite alternate;
+    }
+    @keyframes disco-spot-fade {
+      0% { filter: brightness(1.2) blur(0px);}
+      50% { filter: brightness(1.7) blur(4px);}
+      100% { filter: brightness(1.2) blur(0px);}
+    }
+    /* ЛУЧИ */
+    #luchi-canvas {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      mix-blend-mode: lighten;
+    }
+    /* ОГОНЬКИ */
+    .firefly {
+      position: fixed;
+      border-radius: 50%;
+      opacity: 0.7;
       pointer-events: none;
       mix-blend-mode: screen;
-      z-index: 1;
+      z-index: 2;
+      box-shadow: 0 0 18px 4px #fff700, 0 0 28px 6px #ff00cc;
+      animation: firefly-blink 2s infinite alternate;
+    }
+    @keyframes firefly-blink {
+      0% { filter: brightness(1);}
+      100% { filter: brightness(2.5);}
     }
   </style>
 </head>
@@ -76,6 +88,7 @@
   <div id="marquee-container">
     <div id="marquee">Загрузка...</div>
   </div>
+  <canvas id="luchi-canvas" style="display:none;"></canvas>
 
   <script>
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
@@ -87,50 +100,144 @@
     let lastConfig = {};
     let bgEffect = "";
 
-    // --- Огоньки
+    // --- ДИСКО — анимируем круги
+    let discoSpots = [];
+    function createDiscoSpots() {
+      removeDiscoSpots();
+      let num = 12;
+      const palette = [
+        "#ff00cc", "#00ffcc", "#fff700", "#00aaff", "#f9484a", "#00ff00", "#ffb347", "#b388ff"
+      ];
+      for (let i = 0; i < num; i++) {
+        let d = document.createElement("div");
+        d.className = "disco-spot";
+        let size = Math.random()*200 + 120;
+        d.style.width = d.style.height = size + "px";
+        d.style.left = Math.random()*(window.innerWidth-size) + "px";
+        d.style.top = Math.random()*(window.innerHeight-size) + "px";
+        d.style.background = `radial-gradient(circle, ${palette[i%palette.length]} 0%, transparent 85%)`;
+        d.style.animationDelay = (Math.random()*2.5) + "s";
+        document.body.appendChild(d);
+        discoSpots.push(d);
+      }
+    }
+    function removeDiscoSpots() {
+      for (let d of discoSpots) document.body.removeChild(d);
+      discoSpots = [];
+    }
+
+    // --- ЛУЧИ (динамика через canvas)
+    let luchiActive = false;
+    let luchiCanvas = document.getElementById('luchi-canvas');
+    let luchiCtx = luchiCanvas.getContext('2d');
+    function resizeLuchiCanvas() {
+      luchiCanvas.width = window.innerWidth;
+      luchiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeLuchiCanvas);
+
+    function drawLuchi(ts) {
+      if (!luchiActive) return;
+      let ctx = luchiCtx;
+      let w = luchiCanvas.width, h = luchiCanvas.height;
+      ctx.clearRect(0,0,w,h);
+      let rays = 13, centerX = w/2, centerY = h/2;
+      let baseRadius = Math.max(w,h)*0.48;
+      let time = (ts/900) % (2*Math.PI);
+      for (let i=0;i<rays;i++) {
+        let angle = (2*Math.PI/rays)*i + time;
+        let length = baseRadius*(0.88 + 0.11*Math.sin(time*2 + i));
+        let x2 = centerX + Math.cos(angle)*length;
+        let y2 = centerY + Math.sin(angle)*length;
+        let grad = ctx.createLinearGradient(centerX, centerY, x2, y2);
+        grad.addColorStop(0, "#fff700");
+        grad.addColorStop(0.4, "#ff00cc");
+        grad.addColorStop(0.7, "#00ffcc");
+        grad.addColorStop(1, "transparent");
+        ctx.save();
+        ctx.globalAlpha = 0.33 + 0.44*Math.abs(Math.sin(time*2+i));
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(x2, y2);
+        ctx.lineWidth = 55 + 30*Math.abs(Math.cos(time*2 + i));
+        ctx.strokeStyle = grad;
+        ctx.stroke();
+        ctx.restore();
+      }
+      requestAnimationFrame(drawLuchi);
+    }
+    function startLuchi() {
+      luchiActive = true;
+      luchiCanvas.style.display = '';
+      resizeLuchiCanvas();
+      requestAnimationFrame(drawLuchi);
+    }
+    function stopLuchi() {
+      luchiActive = false;
+      luchiCanvas.style.display = 'none';
+      luchiCtx.clearRect(0,0,luchiCanvas.width,luchiCanvas.height);
+    }
+
+    // --- ОГОНЬКИ (firefly, плавные движения)
     let fireflies = [];
     function createFireflies() {
       removeFireflies();
       let num = 16;
       for (let i = 0; i < num; i++) {
         let f = document.createElement("div");
-        f.id = "firefly";
-        f.style.width = f.style.height = (Math.random()*10+10) + "px";
-        f.style.background = `radial-gradient(circle, #fff700 0%, #ff00cc 90%, transparent 100%)`;
+        f.className = "firefly";
+        let size = Math.random()*16+12;
+        f.style.width = f.style.height = size + "px";
         f.style.left = Math.random()*window.innerWidth + "px";
         f.style.top = Math.random()*window.innerHeight + "px";
-        f.style.opacity = Math.random()*0.4+0.3;
-        f.style.transition = "all 2s";
-        f.animate = function() {
-          f.style.left = Math.random()*window.innerWidth + "px";
-          f.style.top = Math.random()*window.innerHeight + "px";
-        };
+        f.style.background = `radial-gradient(circle, #fff700 0%, #ff00cc 90%, transparent 100%)`;
         document.body.appendChild(f);
-        fireflies.push(f);
+        fireflies.push({
+          el: f,
+          x: parseFloat(f.style.left),
+          y: parseFloat(f.style.top),
+          dx: (Math.random()-0.5)*1.5,
+          dy: (Math.random()-0.5)*1.5,
+          size: size
+        });
       }
+      animateFireflies();
     }
     function removeFireflies() {
-      for (let f of fireflies) document.body.removeChild(f);
+      for (let f of fireflies) if (f.el && f.el.parentNode) f.el.parentNode.removeChild(f.el);
       fireflies = [];
     }
     function animateFireflies() {
-      for (let f of fireflies) f.animate();
-      setTimeout(animateFireflies, 2000);
+      for (let f of fireflies) {
+        f.x += f.dx*4 + (Math.random()-0.5)*2;
+        f.y += f.dy*4 + (Math.random()-0.5)*2;
+        if (f.x < 0 || f.x > window.innerWidth-f.size) f.dx *= -1;
+        if (f.y < 0 || f.y > window.innerHeight-f.size) f.dy *= -1;
+        f.el.style.left = f.x + "px";
+        f.el.style.top = f.y + "px";
+      }
+      if (fireflies.length) setTimeout(animateFireflies, 50);
     }
 
+    // --- Переключение фонов
     function setBodyBgEffect(effect) {
-      document.body.classList.remove("bg-raduga","bg-disco","bg-luchi","bg-ogni");
+      document.body.classList.remove("bg-raduga");
+      removeDiscoSpots();
+      stopLuchi();
       removeFireflies();
-      if (effect === "raduga") document.body.classList.add("bg-raduga");
-      else if (effect === "disco") document.body.classList.add("bg-disco");
-      else if (effect === "luchi") document.body.classList.add("bg-luchi");
-      else if (effect === "ogni")  {
-        document.body.classList.add("bg-ogni");
+
+      if (effect === "raduga") {
+        document.body.classList.add("bg-raduga");
+      } else if (effect === "disco") {
+        createDiscoSpots();
+      } else if (effect === "luchi") {
+        startLuchi();
+      } else if (effect === "ogni") {
         createFireflies();
-        animateFireflies();
       }
     }
 
+    // --- ОСНОВНОЙ КОД БЕГУЩЕЙ СТРОКИ (как раньше)
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
       const elapsed = (timestamp - animate.last) / 1000;
@@ -227,7 +334,7 @@
         bgEffect = data.bg;
       } else {
         document.body.style.backgroundColor = data.bg;
-        if (bgEffect) setBodyBgEffect(""); // убрать эффект если был
+        setBodyBgEffect("");
         bgEffect = "";
       }
 
