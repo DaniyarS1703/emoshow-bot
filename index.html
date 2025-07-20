@@ -43,6 +43,10 @@
       0% { background-position: 0% 50%; }
       100% { background-position: 100% 50%; }
     }
+    body.bg-drkids {
+      background: url('orig.gif') center center / cover no-repeat fixed;
+      background-color: #fff2fc;
+    }
     /* ДИСКО — динамичные пятна/круги */
     .disco-spot {
       position: fixed;
@@ -221,7 +225,7 @@
 
     // --- Переключение фонов
     function setBodyBgEffect(effect) {
-      document.body.classList.remove("bg-raduga");
+      document.body.classList.remove("bg-raduga","bg-disco","bg-drkids");
       removeDiscoSpots();
       stopLuchi();
       removeFireflies();
@@ -234,6 +238,8 @@
         startLuchi();
       } else if (effect === "ogni") {
         createFireflies();
+      } else if (effect === "drkids") {
+        document.body.classList.add("bg-drkids");
       }
     }
 
@@ -329,7 +335,7 @@
       marquee.style.color = data.color;
 
       // Анимированные фоны
-      if (["raduga","disco","luchi","ogni"].includes(data.bg)) {
+      if (["raduga","disco","luchi","ogni","drkids"].includes(data.bg)) {
         setBodyBgEffect(data.bg);
         bgEffect = data.bg;
       } else {

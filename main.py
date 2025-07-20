@@ -45,18 +45,13 @@ def menu_inline_keyboard(active="bg"):
     return kb
 
 def bg_color_keyboard(current_bg):
-    # 9+3 цветов + 4 анимации
     colors = [
         ("⬜", "white"),    ("⬛", "black"),    ("🟥", "red"),
         ("🟦", "blue"),     ("🟩", "green"),   ("🟨", "yellow"),
         ("🟧", "orange"),   ("🟪", "purple"),  ("🟫", "brown"),
-        ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown")
-    ]
-    anims = [
-        ("🌈 Радуга", "raduga"),
-        ("🟠 Диско", "disco"),
-        ("🟪 Лучи", "luchi"),
-        ("🟣 Огоньки", "ogni")
+        ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown"),
+        ("🌈", "raduga"),   ("🟠", "disco"),   ("💫", "luchi"),
+        ("✨", "ogni"),     ("🎉", "drkids"),
     ]
     kb = InlineKeyboardMarkup(row_width=3)
     btns = []
@@ -65,13 +60,6 @@ def bg_color_keyboard(current_bg):
         btns.append(InlineKeyboardButton(text, callback_data=f"setbg:{val}"))
     for i in range(0, len(btns), 3):
         kb.row(*btns[i:i+3])
-    # Анимации отдельной строкой
-    btns_anim = []
-    for title, val in anims:
-        text = f"{title}✅" if val == current_bg else title
-        btns_anim.append(InlineKeyboardButton(text, callback_data=f"setbg:{val}"))
-    for i in range(0, len(btns_anim), 3):
-        kb.row(*btns_anim[i:i+3])
     return kb
 
 def text_color_keyboard(current_color):
