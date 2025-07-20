@@ -4,24 +4,15 @@ from flask_cors import CORS
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
-# ——————————————————————
-# Configuration
-# ——————————————————————
 TELEGRAM_TOKEN = "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw"
 API_KEY        = "77777"
 WEBHOOK_URL    = "https://emoshow-bot.onrender.com"
 PORT           = 10000
 
-# ——————————————————————
-# App & Bot Initialization
-# ——————————————————————
 app = Flask(__name__)
 CORS(app)
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# ——————————————————————
-# Shared State
-# ——————————————————————
 latest_command = {
     "text":      "Поздравляем с праздником! EMO",
     "color":     "black",
@@ -32,9 +23,6 @@ latest_command = {
 }
 waiting_text = {}
 
-# ——————————————————————
-# Keyboards
-# ——————————————————————
 def menu_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
     kb.add(KeyboardButton("Меню"))
@@ -54,7 +42,8 @@ def bg_keyboard():
     kb.add(InlineKeyboardButton("✏️ Изменить текст", callback_data="edit_text"))
     kb.add(
         InlineKeyboardButton("🐇 Скорость", callback_data="show_speed"),
-        InlineKeyboardButton("📌 Закрепить", callback_data="set_fixed")
+        InlineKeyboardButton("📌 Закрепить", callback_data="set_fixed"),
+        InlineKeyboardButton("▶️ Бегущая строка", callback_data="set_scroll"),
     )
     return kb
 
@@ -79,9 +68,6 @@ def speed_keyboard():
         kb.add(InlineKeyboardButton(name, callback_data=f"setspeed:{val}"))
     return kb
 
-# ——————————————————————
-# Bot Handlers
-# ——————————————————————
 @bot.message_handler(commands=['start'])
 def on_start(msg):
     bot.send_message(
@@ -129,6 +115,11 @@ def cb_show_speed(c):
 def cb_set_fixed(c):
     latest_command["direction"] = "fixed"
     bot.answer_callback_query(c.id, "Текст закреплён по центру!")
+
+@bot.callback_query_handler(lambda c: c.data == "set_scroll")
+def cb_set_scroll(c):
+    latest_command["direction"] = "left"
+    bot.answer_callback_query(c.id, "Включён режим бегущей строки!")
 
 @bot.callback_query_handler(lambda c: c.data == "show_bg")
 def cb_show_bg(c):
@@ -205,9 +196,6 @@ def fallback(m):
             reply_markup=menu_keyboard()
         )
 
-# ——————————————————————
-# HTTP Endpoints
-# ——————————————————————
 @app.route('/')
 def root():
     return redirect("https://daniyars1703.github.io/emoshow-bot/")
@@ -224,9 +212,6 @@ def telegram_webhook():
     bot.process_new_updates([update])
     return '', 200
 
-# ——————————————————————
-# Startup
-# ——————————————————————
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.set_webhook(url=f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}")

@@ -25,7 +25,7 @@
     #marquee {
       position: absolute;
       top: 50%;
-      white-space: pre-line; /* Изменено: поддержка переносов строк */
+      white-space: pre-line; /* Переносы строк */
       transform: translateY(-50%) translateX(100%);
       will-change: transform;
       left: 0;
@@ -35,8 +35,8 @@
     }
     .fixed {
       left: 50%;
+      right: auto;
       transform: translate(-50%, -50%) !important;
-      /* Центрируем и останавливаем */
     }
   </style>
 </head>
@@ -49,10 +49,9 @@
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
 
-    // Скорость: пикселей в секунду (будем пересчитывать из speed из API)
     let speedPxPerSec = 100; 
     let posX; // текущая позиция текста
-    let lastDirection = "left"; // Для отслеживания смены режима
+    let lastDirection = "left"; // для отслеживания смены режима
 
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
@@ -70,7 +69,12 @@
           posX = marquee.parentElement.offsetWidth;
         }
         marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+        marquee.classList.remove("fixed");
+      } else {
+        // Если режим "fixed", останавливаем и центрируем
+        marquee.classList.add("fixed");
       }
+
       requestAnimationFrame(animate);
     }
 
@@ -121,6 +125,7 @@
     // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
+
   </script>
 </body>
 </html>
