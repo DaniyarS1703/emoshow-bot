@@ -9,28 +9,29 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.apihelper import ApiTelegramException
 
-# === Logging ===
+# === Настройка логов ===
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# === Constants ===
+# === Константы ===
 TELEGRAM_TOKEN = os.environ.get(
     "TELEGRAM_TOKEN",
     "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw"
 )
 API_KEY = os.environ.get("API_KEY", "77777")
 
-# === Initialization ===
+# === Flask + CORS ===
 app = Flask(__name__)
 CORS(app)
 
+# === Бот ===
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 bot.delete_webhook(drop_pending_updates=True)
 
-# === Global state ===
+# === Глобальное состояние ===
 latest_command = {
     "text":      "Поздравляем с праздником! EMO",
     "color":     "black",
@@ -41,7 +42,7 @@ latest_command = {
 }
 waiting_text = {}
 
-# === Keyboard data ===
+# === Данные для клавиатур ===
 bg_colors = [
     ("⬜", "white"), ("⬛", "black"), ("🟥", "red"),
     ("🟦", "blue"),  ("🟩", "green"), ("🟨", "yellow"),
@@ -62,14 +63,14 @@ speed_options = [
 ]
 direction_options = [
     ("⬅️ Влево", "left"),
-    ("🖥️ Экран", "bounce"),
+    ("🖥️ Экран",  "bounce"),
     ("🔒 Закрепить", "static")
 ]
 
-# === Keyboards ===
+# === Конструкторы клавиатур ===
 def menu_keyboard():
     kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("🎨 Меню", callback_data="show_main_menu"))
+    kb.add(InlineKeyboardButton("🎨 Меню", callback_data="show_menu"))
     return kb
 
 def bg_keyboard():
@@ -93,7 +94,6 @@ def bg_keyboard():
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
     return kb
 
 def text_color_keyboard():
@@ -113,7 +113,7 @@ def text_color_keyboard():
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_menu"))
     return kb
 
 def size_keyboard():
@@ -133,7 +133,7 @@ def size_keyboard():
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_menu"))
     return kb
 
 def speed_keyboard():
@@ -144,7 +144,7 @@ def speed_keyboard():
             f"{name} {'✅' if val == current else ''}",
             callback_data=f"setspeed:{val}"
         ))
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_menu"))
     return kb
 
 def direction_keyboard():
@@ -155,10 +155,10 @@ def direction_keyboard():
             f"{name} {'✅' if val == current else ''}",
             callback_data=f"setdirection:{val}"
         ))
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_menu"))
     return kb
 
-# === Handlers ===
+# === Хендлеры ===
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(
@@ -167,10 +167,10 @@ def start_message(message):
         reply_markup=menu_keyboard()
     )
 
-@bot.callback_query_handler(func=lambda c: c.data == "show_main_menu")
-def show_main_menu(call):
-    logger.info("show_main_menu triggered")  # debug
-    bot.answer_callback_query(call.id)
+@bot.callback_query_handler(func=lambda c: c.data == "show_menu")
+def show_menu(call):
+    logger.info("show_menu callback triggered")
+    bot.answer_callback_query(call.id, "Открываю меню…")
     bot.edit_message_text(
         "Измените цвет фона:",
         call.message.chat.id,
@@ -281,7 +281,7 @@ def callback_set_direction(call):
 @bot.callback_query_handler(func=lambda c: c.data == "edit_text")
 def callback_edit_text(call):
     waiting_text[call.from_user.id] = True
-    bot.answer_callback_query(call.id, "Введите новый текст")
+    bot.answer_callback_query(call.id, "Введи новый текст")
     bot.edit_message_text(
         "Отправьте текст:",
         call.message.chat.id,
@@ -330,9 +330,12 @@ def api_latest():
 
 @app.route('/')
 def index():
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
+    return send_from_directory(
+        os.path.dirname(os.path.abspath(__file__)),
+        'index.html'
+    )
 
-# === Polling loop ===
+# === Polling ===
 def run_bot():
     while True:
         try:
@@ -340,7 +343,7 @@ def run_bot():
         except ApiTelegramException as e:
             if "409" in str(e):
                 continue
-            logger.exception("Polling failed:")
+            logger.exception("Polling упал:")
             time.sleep(15)
         except Exception:
             logger.exception("Unexpected polling error:")
@@ -348,6 +351,6 @@ def run_bot():
 
 if __name__ == '__main__':
     threading.Thread(target=run_bot, daemon=True).start()
-    # restart after changes: python main.py
+    # после правок не забыть: python main.py
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
