@@ -57,16 +57,17 @@
     let animateId = null;
 
     function animate(timestamp) {
-      // Если сейчас режим fixed — просто не двигаем!
       if (lastDirection === "fixed") return;
 
-      if (!animate.last) animate.last = timestamp;
+      if (!animate.last) {
+        animate.last = timestamp;
+        // Начальная позиция — всегда за правым краем!
+        posX = marquee.parentElement.offsetWidth;
+        marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      }
       const elapsed = (timestamp - animate.last) / 1000;
       animate.last = timestamp;
 
-      if (posX === undefined) {
-        posX = marquee.parentElement.offsetWidth;
-      }
       posX -= speedPxPerSec * elapsed;
       const textWidth = marquee.offsetWidth;
       if (posX < -textWidth) {
@@ -87,8 +88,8 @@
 
     function startScroll() {
       marquee.classList.remove("fixed");
-      posX = marquee.parentElement.offsetWidth;
       animate.last = undefined;
+      if (animateId) cancelAnimationFrame(animateId);
       animateId = requestAnimationFrame(animate);
     }
 
@@ -124,11 +125,10 @@
       }
     }
 
-    // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
 
-    // Первичная инициализация
+    // Запуск начальной анимации при загрузке (режим по умолчанию — бегущая строка)
     startScroll();
   </script>
 </body>
