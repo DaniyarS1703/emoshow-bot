@@ -32,6 +32,7 @@
       white-space: pre-line;
       will-change: transform;
       transform: translateY(-50%) translateX(100%);
+      transition: transform 0.3s;
     }
     .fixed {
       left: 50% !important;
@@ -53,25 +54,42 @@
     let speedPxPerSec = 100;
     let posX;
     let lastDirection = "left";
+    let animateId = null;
 
     function animate(timestamp) {
+      // Если сейчас режим fixed — просто не двигаем!
+      if (lastDirection === "fixed") return;
+
       if (!animate.last) animate.last = timestamp;
       const elapsed = (timestamp - animate.last) / 1000;
       animate.last = timestamp;
 
-      // Только если режим не "fixed"
-      if (lastDirection !== "fixed") {
-        if (posX === undefined) {
-          posX = marquee.parentElement.offsetWidth;
-        }
-        posX -= speedPxPerSec * elapsed;
-        const textWidth = marquee.offsetWidth;
-        if (posX < -textWidth) {
-          posX = marquee.parentElement.offsetWidth;
-        }
-        marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      if (posX === undefined) {
+        posX = marquee.parentElement.offsetWidth;
       }
-      requestAnimationFrame(animate);
+      posX -= speedPxPerSec * elapsed;
+      const textWidth = marquee.offsetWidth;
+      if (posX < -textWidth) {
+        posX = marquee.parentElement.offsetWidth;
+      }
+      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+      animateId = requestAnimationFrame(animate);
+    }
+
+    function stopAnimateAndFix() {
+      if (animateId) cancelAnimationFrame(animateId);
+      animateId = null;
+      animate.last = undefined;
+      marquee.classList.add("fixed");
+      marquee.style.transform = "translate(-50%, -50%)";
+      posX = undefined;
+    }
+
+    function startScroll() {
+      marquee.classList.remove("fixed");
+      posX = marquee.parentElement.offsetWidth;
+      animate.last = undefined;
+      animateId = requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
@@ -87,14 +105,9 @@
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
       if (data.direction === "fixed") {
-        marquee.classList.add("fixed");
-        marquee.style.transform = "translate(-50%, -50%)";
-        posX = undefined; // сбрасываем позицию
+        stopAnimateAndFix();
       } else {
-        marquee.classList.remove("fixed");
-        if (lastDirection !== data.direction) {
-          posX = marquee.parentElement.offsetWidth;
-        }
+        startScroll();
       }
       lastDirection = data.direction;
       marquee.style.opacity = 1;
@@ -111,10 +124,12 @@
       }
     }
 
-    requestAnimationFrame(animate);
+    // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
 
+    // Первичная инициализация
+    startScroll();
   </script>
 </body>
 </html>
