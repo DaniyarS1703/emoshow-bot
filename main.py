@@ -23,7 +23,6 @@ latest_command = {
 }
 waiting_text = {}
 
-# --- Категории для меню ---
 CATEGORIES = ["bg", "color", "size", "speed", "text"]
 CATEGORY_TITLES = {
     "bg": "Цвет фона",
@@ -83,11 +82,18 @@ def size_keyboard(current_size):
     return kb
 
 def speed_keyboard(current_speed):
-    speeds = [("🐢1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("⚡️5", "5")]
+    speeds = [
+        ("🐢1", "1"), ("2", "2"), ("3", "3"),
+        ("4", "4"), ("5", "5"), ("6", "6"),
+        ("7", "7"), ("8", "8"), ("⚡️9", "9")
+    ]
     kb = InlineKeyboardMarkup(row_width=3)
+    btns = []
     for name, val in speeds:
         text = f"{name}✅" if val == current_speed else name
-        kb.add(InlineKeyboardButton(text, callback_data=f"setspeed:{val}"))
+        btns.append(InlineKeyboardButton(text, callback_data=f"setspeed:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.row(*btns[i:i+3])
     return kb
 
 def direction_keyboard(current_direction):
@@ -103,9 +109,7 @@ def direction_keyboard(current_direction):
     return kb
 
 def settings_keyboard(category):
-    # "Шапка" меню
     kb = menu_inline_keyboard(active=category)
-    # Далее — блок опций по выбранной категории
     if category == "bg":
         for row in bg_color_keyboard(latest_command["bg"]).keyboard:
             kb.keyboard.append(row)
@@ -120,7 +124,6 @@ def settings_keyboard(category):
             kb.keyboard.append(row)
     elif category == "text":
         kb.add(InlineKeyboardButton("✏️ Изменить текст", callback_data="edit_text"))
-    # Кнопки смены режима
     if category in ["bg", "color", "size", "speed"]:
         for row in direction_keyboard(latest_command["direction"]).keyboard:
             kb.keyboard.append(row)
@@ -176,6 +179,7 @@ def cb_set_speed(c):
     kb = settings_keyboard("speed")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Скорость обновлена!")
+    # Это сразу обновит скорость и для бегущей строки, и для pingpong!
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setdirection:"))
 def cb_set_direction(c):
