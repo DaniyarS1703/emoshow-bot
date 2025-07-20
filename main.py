@@ -17,7 +17,7 @@ latest_command = {
     "text":      "Поздравляем с праздником! EMO",
     "color":     "black",
     "bg":        "white",
-    "size":      "80",
+    "size":      "70",
     "direction": "left",
     "speed":     "3"
 }
@@ -40,7 +40,6 @@ def menu_inline_keyboard(active="bg"):
             text = f"■ {title.upper()} ■"
         else:
             text = title
-        # Если "ТЕКСТ", то callback не show_text, а edit_text
         callback = "edit_text" if cat == "text" else f"show_{cat}"
         kb.add(InlineKeyboardButton(text, callback_data=callback))
     return kb
@@ -76,8 +75,8 @@ def text_color_keyboard(current_color):
     return kb
 
 def size_keyboard(current_size):
-    sizes = [("80", "80"), ("90", "90"), ("100", "100"),
-             ("110", "110"), ("120", "120"), ("130", "130")]
+    sizes = [("70", "70"), ("80", "80"), ("90", "90"),
+             ("100", "100"), ("110", "110"), ("120", "120")]
     kb = InlineKeyboardMarkup(row_width=3)
     btns = []
     for name, val in sizes:
@@ -128,7 +127,6 @@ def settings_keyboard(category):
     elif category == "speed":
         for row in speed_keyboard(latest_command["speed"]).keyboard:
             kb.keyboard.append(row)
-    # Для текстовой категории не нужны доп. кнопки — сразу появится окно ввода
     if category in ["bg", "color", "size", "speed"]:
         for row in direction_keyboard(latest_command["direction"]).keyboard:
             kb.keyboard.append(row)
