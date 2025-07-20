@@ -54,22 +54,23 @@
     let posX;
     let lastDirection = "left";
     let animateId = null;
+    let lastData = {};
 
     function animate(timestamp) {
       if (lastDirection === "fixed") return;
 
       if (!animate.last) {
         animate.last = timestamp;
-        posX = marquee.parentElement.offsetWidth;
-        marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
+        if (posX === undefined) {
+          posX = marquee.parentElement.offsetWidth;
+        }
       }
       const elapsed = (timestamp - animate.last) / 1000;
       animate.last = timestamp;
 
       posX -= speedPxPerSec * elapsed;
-      const textWidth = marquee.scrollWidth; // ВАЖНО! scrollWidth — полная ширина текста
+      const textWidth = marquee.scrollWidth;
 
-      // Текст уходит полностью за край — только тогда появляется снова
       if (posX < -textWidth) {
         posX = marquee.parentElement.offsetWidth;
       }
@@ -87,14 +88,25 @@
       posX = undefined;
     }
 
-    function startScroll() {
+    function startScroll(resetPos = false) {
       marquee.classList.remove("fixed");
       animate.last = undefined;
+      if (resetPos) posX = undefined;
       if (animateId) cancelAnimationFrame(animateId);
       animateId = requestAnimationFrame(animate);
     }
 
+    function isSameData(a, b) {
+      // Проверяем только те параметры, которые реально важны для сброса анимации
+      return (
+        a.text === b.text &&
+        a.size === b.size &&
+        a.direction === b.direction
+      );
+    }
+
     function updateMarquee(data) {
+      // Сохраняем переносы строк
       marquee.innerHTML = data.text.replace(/\n/g, "<br>");
       marquee.style.color = data.color;
       document.body.style.backgroundColor = data.bg;
@@ -107,12 +119,22 @@
       speed = Math.min(Math.max(speed, 1), 10);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
-      if (data.direction === "fixed") {
-        stopAndFix();
+      // Только если изменилась логика — сбрасываем позицию или режим
+      if (!isSameData(data, lastData)) {
+        if (data.direction === "fixed") {
+          stopAndFix();
+        } else {
+          startScroll(true);
+        }
       } else {
-        startScroll();
+        // Даже если не изменилось ничего кроме цвета/фона — просто обновляем визуально
+        if (data.direction === "fixed") {
+          stopAndFix();
+        }
       }
+
       lastDirection = data.direction;
+      lastData = {...data}; // копируем на след. раз
       marquee.style.opacity = 1;
     }
 
@@ -129,7 +151,8 @@
 
     setInterval(fetchData, 5000);
     fetchData();
-    startScroll();
+    startScroll(true); // запуск с полной инициализацией
+
   </script>
 </body>
 </html>
