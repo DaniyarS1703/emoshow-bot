@@ -34,13 +34,41 @@ CATEGORY_TITLES = {
 }
 
 def menu_inline_keyboard(active="bg"):
+    """
+    Возвращает список кнопок: сначала активная (жирная), потом значения, потом все остальные категории.
+    """
     kb = InlineKeyboardMarkup(row_width=3)
+    # Сначала активная категория
+    active_title = f"■ {CATEGORY_TITLES[active].upper()} ■"
+    callback = "edit_text" if active == "text" else f"show_{active}"
+    kb.add(InlineKeyboardButton(active_title, callback_data=callback))
+    # Значения для выбранной категории
+    if active == "bg":
+        for row in bg_color_keyboard(latest_command["bg"]).keyboard:
+            kb.keyboard.append(row)
+        for row in direction_keyboard(latest_command["direction"]).keyboard:
+            kb.keyboard.append(row)
+    elif active == "color":
+        for row in text_color_keyboard(latest_command["color"]).keyboard:
+            kb.keyboard.append(row)
+    elif active == "size":
+        for row in size_keyboard(latest_command["size"]).keyboard:
+            kb.keyboard.append(row)
+    elif active == "speed":
+        for row in speed_keyboard(latest_command["speed"]).keyboard:
+            kb.keyboard.append(row)
+    elif active == "screensaver":
+        # Специальное поведение — никаких значений (заставка активируется сразу)
+        pass
+    elif active == "text":
+        # Просто выделена жирно
+        pass
+    # Затем остальные категории
     for cat in CATEGORIES:
-        title = CATEGORY_TITLES[cat]
         if cat == active:
-            text = f"■ {title.upper()} ■"
-        else:
-            text = title
+            continue
+        title = CATEGORY_TITLES[cat]
+        text = title
         callback = "edit_text" if cat == "text" else f"show_{cat}"
         kb.add(InlineKeyboardButton(text, callback_data=callback))
     return kb
@@ -118,24 +146,6 @@ def direction_keyboard(current_direction):
         kb.add(InlineKeyboardButton(text, callback_data=f"setdirection:{value}"))
     return kb
 
-def settings_keyboard(category):
-    kb = menu_inline_keyboard(active=category)
-    if category == "bg":
-        for row in bg_color_keyboard(latest_command["bg"]).keyboard:
-            kb.keyboard.append(row)
-        for row in direction_keyboard(latest_command["direction"]).keyboard:
-            kb.keyboard.append(row)
-    elif category == "color":
-        for row in text_color_keyboard(latest_command["color"]).keyboard:
-            kb.keyboard.append(row)
-    elif category == "size":
-        for row in size_keyboard(latest_command["size"]).keyboard:
-            kb.keyboard.append(row)
-    elif category == "speed":
-        for row in speed_keyboard(latest_command["speed"]).keyboard:
-            kb.keyboard.append(row)
-    return kb
-
 @bot.message_handler(commands=['start'])
 def on_start(msg):
     bot.send_message(
@@ -149,13 +159,14 @@ def show_main_menu(msg):
     bot.send_message(
         msg.chat.id,
         "Настройте отображение бегущей строки:",
-        reply_markup=settings_keyboard("bg")
+        reply_markup=menu_inline_keyboard("bg")
     )
 
 @bot.callback_query_handler(lambda c: c.data.startswith("show_"))
 def menu_nav_callback(c):
     cat = c.data[5:]
     if cat == "screensaver":
+        # При выборе заставки — сразу применяем!
         latest_command["bg"] = "green"
         latest_command["color"] = "black"
         latest_command["direction"] = "left"
@@ -163,11 +174,11 @@ def menu_nav_callback(c):
             "ПОЗДРАВЬ СВОИХ ДРУЗЕЙ И РОДНЫХ. ОТПРАВЛЯЙ СВОЙ ТЕКСТ В СООБЩЕНИИ\n"
             "ЗА ЛАЙКИ И РЕПОСТЫ СПАСИБО!"
         )
-        kb = settings_keyboard(cat)
+        kb = menu_inline_keyboard(cat)
         bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
         bot.answer_callback_query(c.id, "Заставка активирована!")
     else:
-        kb = settings_keyboard(cat)
+        kb = menu_inline_keyboard(cat)
         bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
         bot.answer_callback_query(c.id)
 
@@ -183,35 +194,35 @@ def cb_edit_text(c):
 @bot.callback_query_handler(lambda c: c.data.startswith("setbg:"))
 def cb_set_bg(c):
     latest_command["bg"] = c.data.split(":",1)[1]
-    kb = settings_keyboard("bg")
+    kb = menu_inline_keyboard("bg")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Фон обновлён!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setcolor:"))
 def cb_set_color(c):
     latest_command["color"] = c.data.split(":",1)[1]
-    kb = settings_keyboard("color")
+    kb = menu_inline_keyboard("color")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Цвет текста обновлён!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setsize:"))
 def cb_set_size(c):
     latest_command["size"] = c.data.split(":",1)[1]
-    kb = settings_keyboard("size")
+    kb = menu_inline_keyboard("size")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Размер шрифта обновлён!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setspeed:"))
 def cb_set_speed(c):
     latest_command["speed"] = c.data.split(":",1)[1]
-    kb = settings_keyboard("speed")
+    kb = menu_inline_keyboard("speed")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Скорость обновлена!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setdirection:"))
 def cb_set_direction(c):
     latest_command["direction"] = c.data.split(":",1)[1]
-    kb = settings_keyboard("bg")
+    kb = menu_inline_keyboard("bg")
     bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
     bot.answer_callback_query(c.id, "Режим обновлён!")
 
