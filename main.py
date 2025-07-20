@@ -49,7 +49,7 @@ def bg_color_keyboard(current_bg):
         ("⬜", "white"),    ("⬛", "black"),    ("🟥", "red"),
         ("🟦", "blue"),     ("🟩", "green"),   ("🟨", "yellow"),
         ("🟧", "orange"),   ("🟪", "purple"),  ("🟫", "brown"),
-        ("🩷", "pink"),     ("🩵", "lightblue"),("🟫", "darkbrown")
+        ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown")
     ]
     kb = InlineKeyboardMarkup(row_width=3)
     btns = []
@@ -62,10 +62,10 @@ def bg_color_keyboard(current_bg):
 
 def text_color_keyboard(current_color):
     colors = [
-        ("⚪", "white"),     ("⚫", "black"),      ("🔴", "red"),
-        ("🔵", "blue"),      ("🟢", "green"),     ("🟡", "yellow"),
-        ("🟠", "orange"),    ("🟣", "purple"),    ("🟤", "brown"),
-        ("🩷", "pink"),      ("🩵", "lightblue"), ("🟫", "darkbrown")
+        ("⚪", "white"),    ("⚫", "black"),    ("🔴", "red"),
+        ("🔵", "blue"),     ("🟢", "green"),   ("🟡", "yellow"),
+        ("🟠", "orange"),   ("🟣", "purple"),  ("🟤", "brown"),
+        ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown")
     ]
     kb = InlineKeyboardMarkup(row_width=3)
     btns = []
