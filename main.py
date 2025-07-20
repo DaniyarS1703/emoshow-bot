@@ -26,6 +26,25 @@ TELEGRAM_TOKEN = os.environ.get(
 )
 API_KEY = os.environ.get("API_KEY", "77777")
 
+# === ИНИЦИАЛИЗАЦИЯ ===
+app = Flask(__name__)
+CORS(app)
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+
+# Удаляем все вебхуки — чтобы не было конфликта polling vs webhook
+bot.delete_webhook()
+
+latest_command = {
+    "text": "Поздравляем с праздником! EMO",
+    "color": "black",
+    "bg": "white",
+    "size": "100",
+    "direction": "left",  # left, bounce или static
+    "speed": "3"
+}
+waiting_text = {}
+
+# Цвета и настройки клавиатуры
 bg_colors = [
     ("⬜", "white"), ("⬛", "black"), ("🟥", "red"), ("🟦", "blue"),
     ("🟩", "green"), ("🟨", "yellow"), ("🟧", "orange"),
@@ -50,22 +69,6 @@ direction_options = [
     ("🔒 Закрепить", "static")
 ]
 
-# === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
-latest_command = {
-    "text": "Поздравляем с праздником! EMO",
-    "color": "black",
-    "bg": "white",
-    "size": "100",
-    "direction": "left",
-    "speed": "3"
-}
-waiting_text = {}
-
-# === ИНИЦИАЛИЗАЦИЯ ===
-app = Flask(__name__)
-CORS(app)
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
-
 # === УТИЛИТЫ ===
 def safe_edit_reply_markup(chat_id, message_id, reply_markup):
     try:
@@ -77,7 +80,7 @@ def safe_edit_reply_markup(chat_id, message_id, reply_markup):
     except ApiTelegramException as e:
         if "message is not modified" in str(e):
             return
-        logger.exception("Ошибка при редактировании разметки")
+        logger.exception("Ошибка при редактировании клавиатуры")
         raise
 
 # === КЛАВИАТУРЫ ===
@@ -89,13 +92,9 @@ def menu_keyboard():
 def bg_keyboard():
     current = latest_command["bg"]
     kb = InlineKeyboardMarkup(row_width=3)
-    buttons = [
-        InlineKeyboardButton(f"{emoji} {'✅' if color==current else ''}",
-                             callback_data=f"setbg:{color}")
-        for emoji, color in bg_colors
-    ]
-    for i in range(0, len(buttons), 3):
-        kb.add(*buttons[i:i+3])
+    for emoji, color in bg_colors:
+        label = f"{emoji} {'✅' if color==current else ''}"
+        kb.add(InlineKeyboardButton(label, callback_data=f"setbg:{color}"))
     kb.add(
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes")
@@ -110,13 +109,9 @@ def bg_keyboard():
 def text_color_keyboard():
     current = latest_command["color"]
     kb = InlineKeyboardMarkup(row_width=3)
-    buttons = [
-        InlineKeyboardButton(f"{emoji} {'✅' if color==current else ''}",
-                             callback_data=f"setcolor:{color}")
-        for emoji, color in text_colors
-    ]
-    for i in range(0, len(buttons), 3):
-        kb.add(*buttons[i:i+3])
+    for emoji, color in text_colors:
+        label = f"{emoji} {'✅' if color==current else ''}"
+        kb.add(InlineKeyboardButton(label, callback_data=f"setcolor:{color}"))
     kb.add(
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes")
@@ -132,12 +127,9 @@ def text_color_keyboard():
 def size_keyboard():
     current = latest_command["size"]
     kb = InlineKeyboardMarkup(row_width=2)
-    buttons = [
-        InlineKeyboardButton(f"{name} {'✅' if val==current else ''}",
-                             callback_data=f"setsize:{val}")
-        for name, val in sizes
-    ]
-    kb.add(*buttons)
+    for name, val in sizes:
+        label = f"{name} {'✅' if val==current else ''}"
+        kb.add(InlineKeyboardButton(label, callback_data=f"setsize:{val}"))
     kb.add(
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors")
@@ -153,24 +145,18 @@ def size_keyboard():
 def speed_keyboard():
     current = latest_command["speed"]
     kb = InlineKeyboardMarkup(row_width=5)
-    buttons = [
-        InlineKeyboardButton(f"{name} {'✅' if val==current else ''}",
-                             callback_data=f"setspeed:{val}")
-        for name, val in speed_options
-    ]
-    kb.add(*buttons)
+    for name, val in speed_options:
+        label = f"{name} {'✅' if val==current else ''}"
+        kb.add(InlineKeyboardButton(label, callback_data=f"setspeed:{val}"))
     kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
 def direction_keyboard():
     current = latest_command["direction"]
     kb = InlineKeyboardMarkup(row_width=3)
-    buttons = [
-        InlineKeyboardButton(f"{name} {'✅' if val==current else ''}",
-                             callback_data=f"setdirection:{val}")
-        for name, val in direction_options
-    ]
-    kb.add(*buttons)
+    for name, val in direction_options:
+        label = f"{name} {'✅' if val==current else ''}"
+        kb.add(InlineKeyboardButton(label, callback_data=f"setdirection:{val}"))
     kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
@@ -307,7 +293,7 @@ def callback_set_direction(call):
         "left":   "Режим: ⬅️ Классика",
         "bounce": "Режим: 🖥️ Экран",
         "static": "Режим: 🔒 Закрепить текст"
-    }.get(mode, "")
+    }[mode]
     bot.answer_callback_query(call.id, text)
     bot.edit_message_text(
         "Измените направление:",
@@ -373,21 +359,16 @@ def index():
         'index.html'
     )
 
-# === ОБРАБОТЧИК ОШИБОК FLASK ===
-@app.errorhandler(Exception)
-def handle_exception(e):
-    logger.exception("Unhandled exception in Flask:")
-    return "Internal Server Error", 500
+# === Запуск polling в отдельном потоке с перезапуском при ошибках ===
+def run_bot():
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except Exception:
+            logger.exception("Polling упал, перезапуск через 15 секунд")
+            time.sleep(15)
 
-# === ЗАПУСК ===
 if __name__ == '__main__':
-    def run_bot():
-        while True:
-            try:
-                bot.polling(none_stop=True)
-            except Exception:
-                logger.exception("Polling упал, перезапуск через 15 секунд")
-                time.sleep(15)
-
     threading.Thread(target=run_bot, daemon=True).start()
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
