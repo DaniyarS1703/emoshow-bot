@@ -56,24 +56,14 @@
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
     let speedPxPerSec = 100;
-    let posX, posY, vx, vy;
-    let lastDirection = "left";
-    let animateId = null;
+    let posX, posY, vx, vy, angle, lastSpeed, lastDirection, animateId = null;
     let lastData = {};
     let pingpongActive = false;
-
-    // Функция для получения точных размеров
-    function getRect(el) {
-      const rect = el.getBoundingClientRect();
-      return {width: rect.width, height: rect.height};
-    }
 
     function animate(timestamp) {
       if (lastDirection === "fixed") return;
       if (lastDirection === "pingpong" && !pingpongActive) return;
-
       if (lastDirection === "pingpong") {
-        // Получаем актуальные размеры
         let containerRect = marquee.parentElement.getBoundingClientRect();
         let textRect = marquee.getBoundingClientRect();
         let containerW = containerRect.width;
@@ -88,7 +78,7 @@
         posX += vx * elapsed;
         posY += vy * elapsed;
 
-        // Жесткие границы!
+        // Bounce от краёв
         if (posX < 0) { posX = 0; vx = Math.abs(vx); }
         if (posX + textW > containerW) { posX = containerW - textW; vx = -Math.abs(vx); }
         if (posY < 0) { posY = 0; vy = Math.abs(vy); }
@@ -122,18 +112,17 @@
       marquee.classList.remove("fixed");
       pingpongActive = true;
       animate.last = undefined;
-      // Точное определение размера (после смены текста)
       window.scrollTo(0,0);
       let containerRect = marquee.parentElement.getBoundingClientRect();
       let textRect = marquee.getBoundingClientRect();
       posX = 0;
       posY = 0;
-      // Угол вправо-вниз (20-40°)
-      let angle = (20 + Math.random() * 20) * Math.PI / 180;
+      // Сохраняем угол для последующего обновления скорости
+      angle = (20 + Math.random() * 20) * Math.PI / 180;
       let v = speedPxPerSec;
       vx = Math.cos(angle) * v;
       vy = Math.sin(angle) * v;
-
+      lastSpeed = Number(lastData.speed || 3); // для первого раза
       animateId = requestAnimationFrame(animate);
     }
 
@@ -160,7 +149,10 @@
       return (
         a.text === b.text &&
         a.size === b.size &&
-        a.direction === b.direction
+        a.direction === b.direction &&
+        a.speed === b.speed &&
+        a.color === b.color &&
+        a.bg === b.bg
       );
     }
 
@@ -174,8 +166,8 @@
       const minSpeedPx = 100;
       const maxSpeedPx = 600;
       let speed = Number(data.speed);
-      speed = Math.min(Math.max(speed, 1), 10);
-      speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
+      speed = Math.min(Math.max(speed, 1), 9); // 1–9
+      speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 8;
 
       if (!isSameData(data, lastData)) {
         if (data.direction === "fixed") {
@@ -183,11 +175,21 @@
         } else if (data.direction === "pingpong") {
           startPingpong();
         } else {
-          startScroll(true); // бегущая строка
+          startScroll(true);
         }
       } else {
         if (data.direction === "fixed") {
           stopAndFix();
+        }
+      }
+
+      // Если pingpong и изменилась скорость — обновить "на лету"
+      if (data.direction === "pingpong") {
+        if (typeof angle === "number" && Number(data.speed) !== lastSpeed) {
+          let v = speedPxPerSec;
+          vx = Math.cos(angle) * v * (vx >= 0 ? 1 : -1);
+          vy = Math.sin(angle) * v * (vy >= 0 ? 1 : -1);
+          lastSpeed = Number(data.speed);
         }
       }
 
