@@ -102,8 +102,10 @@
           lastDirection = "pingpong";
           marquee.style.whiteSpace = "pre-line";
         }
-        velX = Math.sign(velX) * speedPxPerSec;
-        velY = Math.sign(velY) * speedPxPerSec;
+
+        // --- ГЛАВНАЯ ФИШКА: сохраняем знак направления при изменении скорости!
+        if (velX !== 0) velX = Math.sign(velX) * speedPxPerSec;
+        if (velY !== 0) velY = Math.sign(velY) * speedPxPerSec;
 
         posX += velX * elapsed;
         posY += velY * elapsed;
