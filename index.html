@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>EMOSHOW — Бегущая строка с отскоком fullscreen</title>
+  <title>EMOSHOW — Классическая бегущая строка fullscreen</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%;
@@ -14,28 +14,20 @@
       display: flex;
       align-items: center;
       position: relative;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
     }
     #marquee-container {
       position: relative;
       width: 100vw;
       height: 100vh;
-      overflow: visible;
+      overflow: hidden;
       white-space: nowrap;
     }
     #marquee {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 50%;
       white-space: nowrap;
+      transform: translateY(-50%) translateX(100%);
       will-change: transform;
-      opacity: 1;
-      transition: opacity 0.3s ease;
-      max-width: none;
-      padding: 0;
-      margin: 0;
-      pointer-events: none;
     }
   </style>
 </head>
@@ -48,190 +40,49 @@
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
 
-    let speedPxPerSec = 100;
-    let posX, posY;
-    let velX, velY;
-    let direction = "left";
+    // Скорость: пикселей в секунду (будем пересчитывать из speed из API)
+    let speedPxPerSec = 100; 
 
-    let containerWidth = 0;
-    let containerHeight = 0;
-    let textWidth = 0;
-    let textHeight = 0;
-    const margin = 5;
+    let posX; // текущая позиция текста
 
-    let lastText = "";
-    let lastDirection = "";
-    let lastSpeed = "";
-
-    function degToRad(deg) {
-      return deg * Math.PI / 180;
-    }
-
-    function initPositionAndVelocity() {
-      containerWidth = marquee.parentElement.offsetWidth;
-      containerHeight = marquee.parentElement.offsetHeight;
-
-      const rect = marquee.getBoundingClientRect();
-      textWidth = rect.width;
-      textHeight = rect.height;
-
-      if (direction === "left") {
-        posX = containerWidth;
-        posY = (containerHeight - textHeight) / 2;
-        velX = -speedPxPerSec;
-        velY = 0;
-      } else if (direction === "bounce") {
-        // Если текст длиннее 75% и перенос включён (whiteSpace normal),
-        // то центрируем по горизонтали для переноса
-        if (marquee.style.whiteSpace === "normal") {
-          posX = (containerWidth - textWidth) / 2; // центр горизонтально
-          posY = Math.random() * (containerHeight - textHeight - 2 * margin) + margin;
-          velX = 0; // отключаем горизонтальное движение
-          const signY = Math.random() < 0.5 ? 1 : -1;
-          velY = signY * speedPxPerSec;
-        } else {
-          // Обычный отскок с углом 30 градусов и случайным знаком
-          if (posX === undefined || posY === undefined) {
-            posX = Math.random() * (containerWidth - textWidth - 2 * margin) + margin;
-            posY = Math.random() * (containerHeight - textHeight - 2 * margin) + margin;
-          }
-          const angleRad = degToRad(30);
-          const signX = Math.random() < 0.5 ? 1 : -1;
-          const signY = Math.random() < 0.5 ? 1 : -1;
-          velX = signX * speedPxPerSec * Math.cos(angleRad);
-          velY = signY * speedPxPerSec * Math.sin(angleRad);
-        }
-      }
-    }
-
+    // Обновить позицию по времени
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
-      const elapsed = (timestamp - animate.last) / 1000;
+      if (posX === undefined) {
+        posX = marquee.parentElement.offsetWidth; // начинаем справа вне экрана
+      }
+      const elapsed = (timestamp - animate.last) / 1000; // сек
       animate.last = timestamp;
 
-      if (posX === undefined || posY === undefined) {
-        initPositionAndVelocity();
+      posX -= speedPxPerSec * elapsed; // сдвигаем влево
+
+      const textWidth = marquee.offsetWidth;
+
+      // Если текст полностью ушёл влево за пределы - сбрасываем позицию
+      if (posX < -textWidth) {
+        posX = marquee.parentElement.offsetWidth;
       }
 
-      if (direction === "left") {
-        posX += velX * elapsed;
-        if (posX < -textWidth) {
-          posX = containerWidth;
-        }
-        posY = (containerHeight - textHeight) / 2;
-      } else if (direction === "bounce") {
-        if (marquee.style.whiteSpace === "normal") {
-          // Движение только вертикальное
-          posY += velY * elapsed;
-
-          if (posY <= margin) {
-            posY = margin;
-            velY = -velY;
-          } else if (posY + textHeight >= containerHeight - margin) {
-            posY = containerHeight - textHeight - margin;
-            velY = -velY;
-          }
-          // Горизонтальная позиция зафиксирована (центрирована)
-        } else {
-          posX += velX * elapsed;
-          posY += velY * elapsed;
-
-          if (posX <= margin) {
-            posX = margin;
-            velX = -velX;
-          } else if (posX + textWidth >= containerWidth - margin) {
-            posX = containerWidth - textWidth - margin;
-            velX = -velX;
-          }
-
-          if (posY <= margin) {
-            posY = margin;
-            velY = -velY;
-          } else if (posY + textHeight >= containerHeight - margin) {
-            posY = containerHeight - textHeight - margin;
-            velY = -velY;
-          }
-        }
-      }
-
-      marquee.style.transform = `translate(${posX}px, ${posY}px)`;
+      marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
 
       requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
-      const textChanged = (data.text !== lastText);
-      const directionChanged = (data.direction !== lastDirection);
-      const speedChanged = (data.speed !== lastSpeed);
+      marquee.textContent = data.text;
+      marquee.style.color = data.color;
+      document.body.style.backgroundColor = data.bg;
+      marquee.style.fontSize = data.size + "px";
 
-      if (textChanged || directionChanged) {
-        marquee.style.opacity = 0;
-        setTimeout(() => {
-          marquee.textContent = data.text;
-          marquee.style.color = data.color;
-          document.body.style.backgroundColor = data.bg;
-          marquee.style.fontSize = data.size + "px";
+      // Переводим скорость из 1-10 в пикселей в секунду, например:
+      // max speed 600px/s, min speed 100px/s (можно менять)
+      const minSpeedPx = 100;
+      const maxSpeedPx = 600;
+      let speed = Number(data.speed);
+      speed = Math.min(Math.max(speed, 1), 10);
+      speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
-          const minSpeedPx = 100;
-          const maxSpeedPx = 600;
-          let speed = Number(data.speed);
-          speed = Math.min(Math.max(speed, 1), 10);
-          speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
-
-          direction = data.direction || "left";
-
-          marquee.style.maxWidth = "none";
-          marquee.style.whiteSpace = "nowrap";
-
-          setTimeout(() => {
-            containerWidth = marquee.parentElement.offsetWidth;
-            containerHeight = marquee.parentElement.offsetHeight;
-
-            const rect = marquee.getBoundingClientRect();
-            textWidth = rect.width;
-            textHeight = rect.height;
-
-            if (direction === "bounce" && textWidth > containerWidth * 0.75) {
-              marquee.style.maxWidth = "75vw";
-              marquee.style.whiteSpace = "normal";
-              setTimeout(() => {
-                const rectNew = marquee.getBoundingClientRect();
-                textWidth = rectNew.width;
-                textHeight = rectNew.height;
-              }, 10);
-            }
-
-            initPositionAndVelocity();
-            marquee.style.opacity = 1;
-          }, 50);
-        }, 300);
-      } else {
-        marquee.style.color = data.color;
-        document.body.style.backgroundColor = data.bg;
-        marquee.style.fontSize = data.size + "px";
-
-        const minSpeedPx = 100;
-        const maxSpeedPx = 600;
-        let speed = Number(data.speed);
-        speed = Math.min(Math.max(speed, 1), 10);
-
-        // Если скорость изменилась — сбрасываем анимацию, но не перезагружаем страницу
-        if (speed !== Number(lastSpeed)) {
-          speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
-          initPositionAndVelocity();
-        } else {
-          speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
-        }
-
-        if (directionChanged) {
-          direction = data.direction || "left";
-          initPositionAndVelocity();
-        }
-      }
-
-      lastText = data.text;
-      lastDirection = data.direction;
-      lastSpeed = data.speed;
+      marquee.style.opacity = 1;
     }
 
     async function fetchData() {
@@ -245,9 +96,13 @@
       }
     }
 
+    // Старт анимации
     requestAnimationFrame(animate);
+
+    // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
+
   </script>
 </body>
 </html>
