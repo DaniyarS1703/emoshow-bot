@@ -23,12 +23,13 @@ latest_command = {
 }
 waiting_text = {}
 
-CATEGORIES = ["bg", "color", "size", "speed", "text"]
+CATEGORIES = ["bg", "color", "size", "speed", "screensaver", "text"]
 CATEGORY_TITLES = {
     "bg": "Цвет фона",
     "color": "Цвет текста",
     "size": "Размер",
     "speed": "Скорость",
+    "screensaver": "🖼️ Заставка",
     "text": "ТЕКСТ"
 }
 
@@ -51,7 +52,7 @@ def bg_color_keyboard(current_bg):
         ("🟧", "orange"),   ("🟪", "purple"),  ("🟫", "brown"),
         ("🩷", "#FF00FF"),  ("🩵", "lightblue"),("🟫", "darkbrown"),
         ("🌈", "raduga"),   ("🟠", "disco"),   ("💫", "luchi"),
-        ("✨", "ogni"),     ("🎉", "drkids"),
+        ("✨", "ogni"),     ("🎉", "drkids")
     ]
     kb = InlineKeyboardMarkup(row_width=3)
     btns = []
@@ -122,6 +123,8 @@ def settings_keyboard(category):
     if category == "bg":
         for row in bg_color_keyboard(latest_command["bg"]).keyboard:
             kb.keyboard.append(row)
+        for row in direction_keyboard(latest_command["direction"]).keyboard:
+            kb.keyboard.append(row)
     elif category == "color":
         for row in text_color_keyboard(latest_command["color"]).keyboard:
             kb.keyboard.append(row)
@@ -130,9 +133,6 @@ def settings_keyboard(category):
             kb.keyboard.append(row)
     elif category == "speed":
         for row in speed_keyboard(latest_command["speed"]).keyboard:
-            kb.keyboard.append(row)
-    if category in ["bg", "color", "size", "speed"]:
-        for row in direction_keyboard(latest_command["direction"]).keyboard:
             kb.keyboard.append(row)
     return kb
 
@@ -155,9 +155,21 @@ def show_main_menu(msg):
 @bot.callback_query_handler(lambda c: c.data.startswith("show_"))
 def menu_nav_callback(c):
     cat = c.data[5:]
-    kb = settings_keyboard(cat)
-    bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
-    bot.answer_callback_query(c.id)
+    if cat == "screensaver":
+        latest_command["bg"] = "green"
+        latest_command["color"] = "black"
+        latest_command["direction"] = "left"
+        latest_command["text"] = (
+            "ПОЗДРАВЬ СВОИХ ДРУЗЕЙ И РОДНЫХ. ОТПРАВЛЯЙ СВОЙ ТЕКСТ В СООБЩЕНИИ\n"
+            "ЗА ЛАЙКИ И РЕПОСТЫ СПАСИБО!"
+        )
+        kb = settings_keyboard(cat)
+        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
+        bot.answer_callback_query(c.id, "Заставка активирована!")
+    else:
+        kb = settings_keyboard(cat)
+        bot.edit_message_reply_markup(c.message.chat.id, c.message.message_id, reply_markup=kb)
+        bot.answer_callback_query(c.id)
 
 @bot.callback_query_handler(lambda c: c.data == "edit_text")
 def cb_edit_text(c):

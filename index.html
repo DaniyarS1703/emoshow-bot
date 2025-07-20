@@ -86,6 +86,10 @@
       0% { filter: brightness(1);}
       100% { filter: brightness(2.5);}
     }
+    /* СКРИНСЕЙВЕР */
+    body.bg-screensaver {
+      background: #000 !important;
+    }
   </style>
 </head>
 <body>
@@ -225,7 +229,7 @@
 
     // --- Переключение фонов
     function setBodyBgEffect(effect) {
-      document.body.classList.remove("bg-raduga","bg-disco","bg-drkids");
+      document.body.classList.remove("bg-raduga","bg-disco","bg-drkids","bg-screensaver");
       removeDiscoSpots();
       stopLuchi();
       removeFireflies();
@@ -240,6 +244,8 @@
         createFireflies();
       } else if (effect === "drkids") {
         document.body.classList.add("bg-drkids");
+      } else if (effect === "screensaver") {
+        document.body.classList.add("bg-screensaver");
       }
     }
 
@@ -335,13 +341,20 @@
       marquee.style.color = data.color;
 
       // Анимированные фоны
-      if (["raduga","disco","luchi","ogni","drkids"].includes(data.bg)) {
+      if (["raduga","disco","luchi","ogni","drkids","screensaver"].includes(data.bg)) {
         setBodyBgEffect(data.bg);
         bgEffect = data.bg;
       } else {
         document.body.style.backgroundColor = data.bg;
         setBodyBgEffect("");
         bgEffect = "";
+      }
+
+      // При screensaver всё остальное (текст) скрыто
+      if (data.bg === "screensaver") {
+        marquee.style.display = "none";
+      } else {
+        marquee.style.display = "";
       }
 
       marquee.style.fontSize = data.size + "px";
