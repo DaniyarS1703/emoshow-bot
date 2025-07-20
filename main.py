@@ -31,7 +31,7 @@ app = Flask(__name__)
 CORS(app)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-# Удаляем старый webhook и сбрасываем все обновления, чтобы избежать конфликта 409
+# Сбрасываем вебхук и накопившиеся обновления, чтобы избежать 409‑й ошибки
 bot.delete_webhook(drop_pending_updates=True)
 
 latest_command = {
@@ -39,20 +39,20 @@ latest_command = {
     "color":     "black",
     "bg":        "white",
     "size":      "100",
-    "direction": "left",   # left, bounce или static
+    "direction": "left",
     "speed":     "3"
 }
 waiting_text = {}
 
 bg_colors = [
-    ("⬜", "white"), ("⬛", "black"), ("🟥", "red"), ("🟦", "blue"),
-    ("🟩", "green"), ("🟨", "yellow"), ("🟧", "orange"),
-    ("🟪", "purple"), ("🟫", "brown")
+    ("⬜", "white"), ("⬛", "black"), ("🟥", "red"),
+    ("🟦", "blue"),  ("🟩", "green"), ("🟨", "yellow"),
+    ("🟧", "orange"),("🟪", "purple"),("🟫", "brown")
 ]
 text_colors = [
-    ("⚪", "white"), ("⚫", "black"), ("🔴", "red"), ("🔵", "blue"),
-    ("🟢", "green"), ("🟡", "yellow"), ("🟠", "orange"),
-    ("🟣", "purple"), ("🟤", "brown")
+    ("⚪", "white"), ("⚫", "black"), ("🔴", "red"),
+    ("🔵", "blue"),  ("🟢", "green"), ("🟡", "yellow"),
+    ("🟠", "orange"),("🟣", "purple"),("🟤", "brown")
 ]
 sizes = [
     ("100", "100"), ("120", "120"), ("140", "140"), ("160", "160"),
@@ -88,16 +88,24 @@ def menu_keyboard():
 
 def bg_keyboard():
     current = latest_command["bg"]
-    kb = InlineKeyboardMarkup(row_width=3)
-    for emoji, color in bg_colors:
-        label = f"{emoji} {'✅' if color == current else ''}"
-        kb.add(InlineKeyboardButton(label, callback_data=f"setbg:{color}"))
-    kb.add(
+    kb = InlineKeyboardMarkup()
+    # Кнопки выбора фона, по 3 в ряд
+    buttons = [
+        InlineKeyboardButton(
+            f"{emoji} {'✅' if color == current else ''}",
+            callback_data=f"setbg:{color}"
+        )
+        for emoji, color in bg_colors
+    ]
+    for i in range(0, len(buttons), 3):
+        kb.row(*buttons[i:i+3])
+    # Дополнительные опции
+    kb.row(
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes")
     )
-    kb.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    kb.add(
+    kb.row(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
+    kb.row(
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
@@ -157,7 +165,7 @@ def direction_keyboard():
     kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
-# Обработчики
+# === ХЕНДЛЕРЫ ===
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
@@ -167,7 +175,7 @@ def start_message(message):
         reply_markup=menu_keyboard()
     )
 
-@bot.message_handler(func=lambda m: m.text and m.text.replace('\u00A0', ' ') == "🎨 Меню")
+@bot.message_handler(func=lambda m: m.text and m.text.replace('\u00A0',' ') == "🎨 Меню")
 def show_main_menu(message):
     bot.send_message(
         message.chat.id,
@@ -318,19 +326,20 @@ def handle_all(message):
         waiting_text[uid] = False
         bot.reply_to(message, "Текст обновлён!")
     else:
-        up = message.text.strip().upper()
+        text = message.text.strip()
+        up = text.upper()
         if up.startswith("ТЕКСТ:"):
-            latest_command["text"] = message.text.strip()[6:]
+            latest_command["text"] = text[6:].strip()
             bot.reply_to(message, "Текст обновлён!")
         elif up.startswith("ЦВЕТ:"):
-            latest_command["color"] = message.text.strip()[5:]
+            latest_command["color"] = text[5:].strip()
             bot.reply_to(message, "Цвет текста обновлён!")
         elif up.startswith("ФОН:"):
-            latest_command["bg"] = message.text.strip()[4:]
+            latest_command["bg"] = text[4:].strip()
             bot.reply_to(message, "Цвет фона обновлён!")
         elif up.startswith("РАЗМЕР:"):
             try:
-                latest_command["size"] = str(int(message.text.strip()[7:]))
+                latest_command["size"] = str(int(text[7:].strip()))
                 bot.reply_to(message, "Размер шрифта обновлён!")
             except:
                 bot.reply_to(message, "Ошибка: размер — только число.")
@@ -359,8 +368,13 @@ def run_bot():
     while True:
         try:
             bot.polling(none_stop=True, skip_pending=True)
+        except ApiTelegramException as e:
+            if "Error code: 409" in str(e):
+                continue
+            logger.exception("Polling упал:")
+            time.sleep(15)
         except Exception:
-            logger.exception("Polling упал, перезапуск через 15 секунд")
+            logger.exception("Unexpected error в polling:")
             time.sleep(15)
 
 if __name__ == '__main__':
