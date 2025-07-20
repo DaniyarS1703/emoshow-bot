@@ -28,8 +28,7 @@ app = Flask(__name__)
 CORS(app)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-# Удаляем старый webhook и сбрасываем все обновления,
-# чтобы избежать конфликта “409: terminated by other getUpdates”
+# Удаляем старый webhook и сбрасываем все обновления, чтобы избежать конфликта 409
 bot.delete_webhook(drop_pending_updates=True)
 
 latest_command = {
@@ -347,12 +346,15 @@ def api_latest():
 
 @app.route('/')
 def index():
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
+    return send_from_directory(
+        os.path.dirname(os.path.abspath(__file__)),
+        'index.html'
+    )
 
 def run_bot():
     while True:
         try:
-            bot.polling(none_stop=True)
+            bot.polling(none_stop=True, skip_pending=True)
         except Exception:
             logger.exception("Polling упал, перезапуск через 15 секунд")
             time.sleep(15)
