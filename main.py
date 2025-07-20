@@ -44,6 +44,7 @@ def bg_keyboard():
         InlineKeyboardButton("🐇 Скорость", callback_data="show_speed"),
         InlineKeyboardButton("📌 Закрепить", callback_data="set_fixed"),
         InlineKeyboardButton("▶️ Бегущая строка", callback_data="set_scroll"),
+        InlineKeyboardButton("🏓 Пинг-понг", callback_data="set_pingpong")
     )
     return kb
 
@@ -120,6 +121,11 @@ def cb_set_fixed(c):
 def cb_set_scroll(c):
     latest_command["direction"] = "left"
     bot.answer_callback_query(c.id, "Включён режим бегущей строки!")
+
+@bot.callback_query_handler(lambda c: c.data == "set_pingpong")
+def cb_set_pingpong(c):
+    latest_command["direction"] = "pingpong"
+    bot.answer_callback_query(c.id, "Включён режим Пинг-понг!")
 
 @bot.callback_query_handler(lambda c: c.data == "show_bg")
 def cb_show_bg(c):
