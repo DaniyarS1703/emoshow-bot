@@ -30,21 +30,36 @@ def menu_keyboard():
 
 def bg_keyboard():
     kb = InlineKeyboardMarkup(row_width=3)
+    current_bg = latest_command.get("bg", "white")
+    # 12 цветов
     colors = [
-        ("⬜","white"),   ("⬛","black"),   ("🟥","red"),
-        ("🟦","blue"),    ("🟩","green"),  ("🟨","yellow"),
-        ("🟧","orange"),  ("🟪","purple"), ("🟫","brown"),
-        ("🩷","#FF00FF"), ("🩵","#00FFFF"), ("🩶","#CCCCCC"),
+        ("⬜", "white"),   ("⬛", "black"),   ("🟥", "red"),
+        ("🟦", "blue"),    ("🟩", "green"),  ("🟨", "yellow"),
+        ("🟧", "orange"),  ("🟪", "purple"), ("🟫", "brown"),
+        ("🩷", "#FF00FF"), ("🩵", "#00FFFF"), ("🩶", "#CCCCCC"),
     ]
-    for i in range(0, len(colors), 3):
-        kb.add(*(InlineKeyboardButton(emoji, callback_data=f"setbg:{val}") for emoji, val in colors[i:i+3]))
-    # Добавляем 4 кнопки-анимированных фона:
-    kb.add(
-        InlineKeyboardButton("🟠 Диско", callback_data="setbg:disco"),
-        InlineKeyboardButton("🌈 Радуга", callback_data="setbg:raduga"),
-        InlineKeyboardButton("🟪 Лучи",  callback_data="setbg:luchi"),
-        InlineKeyboardButton("🟣 Огоньки",callback_data="setbg:ogni")
-    )
+    btns = []
+    for emoji, val in colors:
+        label = emoji + (" ✔" if str(val).lower() == str(current_bg).lower() else "")
+        btns.append(InlineKeyboardButton(label, callback_data=f"setbg:{val}"))
+    # Три столбца
+    for i in range(0, len(btns), 3):
+        kb.add(*btns[i:i+3])
+
+    # Анимированные
+    anim = [
+        ("🟠 Диско", "disco"),
+        ("🌈 Радуга", "raduga"),
+        ("🟪 Лучи", "luchi"),
+        ("🟣 Огоньки", "ogni"),
+    ]
+    btns2 = []
+    for name, val in anim:
+        label = name + (" ✔" if str(current_bg).lower() == val else "")
+        btns2.append(InlineKeyboardButton(label, callback_data=f"setbg:{val}"))
+    for i in range(0, len(btns2), 3):
+        kb.add(*btns2[i:i+3])
+
     kb.add(
         InlineKeyboardButton("🎨 Цвет текста", callback_data="show_text"),
         InlineKeyboardButton("🔠 Размер шрифта", callback_data="show_size"),
@@ -60,13 +75,19 @@ def bg_keyboard():
 
 def text_keyboard():
     kb = InlineKeyboardMarkup(row_width=3)
-    for emoji, val in [
-        ("⬜","white"),("⬛","black"),("🟥","red"),
-        ("🟦","blue"),("🟩","green"),("🟨","yellow"),
-        ("🟧","orange"),("🟪","purple"),("🟫","brown"),
-        ("🩷","#FF00FF"),("🩵","#00FFFF"),("🩶","#CCCCCC"),
-    ]:
-        kb.add(InlineKeyboardButton(emoji, callback_data=f"setcolor:{val}"))
+    current_color = latest_command.get("color", "black")
+    colors = [
+        ("⬜", "white"),   ("⬛", "black"),   ("🟥", "red"),
+        ("🟦", "blue"),    ("🟩", "green"),  ("🟨", "yellow"),
+        ("🟧", "orange"),  ("🟪", "purple"), ("🟫", "brown"),
+        ("🩷", "#FF00FF"), ("🩵", "#00FFFF"), ("🩶", "#CCCCCC"),
+    ]
+    btns = []
+    for emoji, val in colors:
+        label = emoji + (" ✔" if str(val).lower() == str(current_color).lower() else "")
+        btns.append(InlineKeyboardButton(label, callback_data=f"setcolor:{val}"))
+    for i in range(0, len(btns), 3):
+        kb.add(*btns[i:i+3])
     return kb
 
 def size_keyboard():
