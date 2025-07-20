@@ -41,7 +41,7 @@ waiting_text = {}
 # ——————————————————————
 def menu_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("🎨 Меню"))
+    kb.add(KeyboardButton("Меню"))
     return kb
 
 def bg_keyboard():
@@ -114,13 +114,14 @@ def safe_edit(chat_id, msg_id, markup):
 def on_start(msg):
     bot.send_message(
         msg.chat.id,
-        "Добро пожаловать! Управляй бегущей строкой через 🎨 Меню.",
+        "Добро пожаловать! Чтобы открыть меню управления, нажмите «Меню».",
         reply_markup=menu_keyboard()
     )
 
-@bot.message_handler(func=lambda m: m.text == "🎨 Меню")
+# Теперь ловим любое сообщение, где есть слово «Меню»
+@bot.message_handler(func=lambda m: m.text and "Меню" in m.text)
 def show_menu(msg):
-    bot.send_message(msg.chat.id, "Выберите:", reply_markup=bg_keyboard())
+    bot.send_message(msg.chat.id, "Выберите настройку:", reply_markup=bg_keyboard())
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setbg:"))
 def cb_bg(c):
@@ -170,7 +171,9 @@ def handle_text(m):
     waiting_text[m.from_user.id] = False
     bot.reply_to(m, "Текст обновлён!", reply_markup=menu_keyboard())
 
-# Fallback for simple commands (ТЕКСТ:, ФОН:, ЦВЕТ:, РАЗМЕР:)
+# ——————————————————————
+# Fallback for simple inline commands
+# ——————————————————————
 @bot.message_handler(func=lambda m: True)
 def fallback(m):
     txt = m.text.strip()
@@ -193,7 +196,7 @@ def fallback(m):
     else:
         bot.reply_to(
             m,
-            "Используй 🎨 Меню или команды:\n"
+            "Используй «Меню» или команды:\n"
             "ТЕКСТ: ..., ФОН: ..., ЦВЕТ: ..., РАЗМЕР: ..."
         )
 
@@ -210,7 +213,6 @@ def api_latest():
         return jsonify({"error": "unauthorized"}), 403
     return jsonify(latest_command)
 
-# Telegram webhook receiver
 @app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
 def telegram_webhook():
     json_str = request.get_data().decode('utf-8')
@@ -222,8 +224,6 @@ def telegram_webhook():
 # Startup
 # ——————————————————————
 if __name__ == '__main__':
-    # Set webhook so Telegram pushes updates to our endpoint
     bot.remove_webhook()
     bot.set_webhook(url=f"{WEBHOOK_URL}/{TELEGRAM_TOKEN}")
-    # Launch Flask
     app.run(host='0.0.0.0', port=PORT)
