@@ -28,7 +28,6 @@ app = Flask(__name__)
 CORS(app)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-# сбрасываем вебхук и накопившиеся обновления, чтобы избежать 409‑й ошибки
 bot.delete_webhook(drop_pending_updates=True)
 
 # === Global state ===
@@ -37,7 +36,7 @@ latest_command = {
     "color":     "black",
     "bg":        "white",
     "size":      "100",
-    "direction": "left",   # left, bounce или static
+    "direction": "left",
     "speed":     "3"
 }
 waiting_text = {}
@@ -94,6 +93,7 @@ def bg_keyboard():
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
     return kb
 
 def text_color_keyboard():
@@ -169,6 +169,7 @@ def start_message(message):
 
 @bot.callback_query_handler(func=lambda c: c.data == "show_main_menu")
 def show_main_menu(call):
+    logger.info("show_main_menu triggered")  # debug
     bot.answer_callback_query(call.id)
     bot.edit_message_text(
         "Измените цвет фона:",
@@ -179,7 +180,7 @@ def show_main_menu(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setbg:"))
 def callback_set_bg(call):
-    color = call.data.split(":",1)[1]
+    color = call.data.split(":", 1)[1]
     latest_command["bg"] = color
     bot.answer_callback_query(call.id, "Фон сменён!")
     bot.edit_message_text(
@@ -231,7 +232,7 @@ def show_direction(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setcolor:"))
 def callback_set_color(call):
-    color = call.data.split(":",1)[1]
+    color = call.data.split(":", 1)[1]
     latest_command["color"] = color
     bot.answer_callback_query(call.id, "Цвет текста обновлён!")
     bot.edit_message_text(
@@ -243,7 +244,7 @@ def callback_set_color(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setsize:"))
 def callback_set_size(call):
-    size = call.data.split(":",1)[1]
+    size = call.data.split(":", 1)[1]
     latest_command["size"] = size
     bot.answer_callback_query(call.id, "Размер шрифта обновлён!")
     bot.edit_message_text(
@@ -255,7 +256,7 @@ def callback_set_size(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setspeed:"))
 def callback_set_speed(call):
-    speed = call.data.split(":",1)[1]
+    speed = call.data.split(":", 1)[1]
     latest_command["speed"] = speed
     bot.answer_callback_query(call.id, "Скорость обновлена!")
     bot.edit_message_text(
@@ -267,7 +268,7 @@ def callback_set_speed(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setdirection:"))
 def callback_set_direction(call):
-    mode = call.data.split(":",1)[1]
+    mode = call.data.split(":", 1)[1]
     latest_command["direction"] = mode
     bot.answer_callback_query(call.id, "Направление обновлено!")
     bot.edit_message_text(
@@ -329,12 +330,9 @@ def api_latest():
 
 @app.route('/')
 def index():
-    return send_from_directory(
-        os.path.dirname(os.path.abspath(__file__)),
-        'index.html'
-    )
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
-# === Polling with 409 filtering ===
+# === Polling loop ===
 def run_bot():
     while True:
         try:
@@ -342,13 +340,14 @@ def run_bot():
         except ApiTelegramException as e:
             if "409" in str(e):
                 continue
-            logger.exception("Polling упал:")
+            logger.exception("Polling failed:")
             time.sleep(15)
         except Exception:
-            logger.exception("Unexpected error in polling:")
+            logger.exception("Unexpected polling error:")
             time.sleep(15)
 
 if __name__ == '__main__':
     threading.Thread(target=run_bot, daemon=True).start()
+    # restart after changes: python main.py
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
