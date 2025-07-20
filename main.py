@@ -118,10 +118,39 @@ def on_start(msg):
         reply_markup=menu_keyboard()
     )
 
-# Теперь ловим любое сообщение, где есть слово «Меню»
 @bot.message_handler(func=lambda m: m.text and "Меню" in m.text)
 def show_menu(msg):
     bot.send_message(msg.chat.id, "Выберите настройку:", reply_markup=bg_keyboard())
+
+@bot.callback_query_handler(lambda c: c.data == "show_text")
+def cb_show_text(c):
+    bot.answer_callback_query(c.id)
+    safe_edit(c.message.chat.id, c.message.message_id, None)
+    bot.send_message(c.message.chat.id, "Выберите цвет текста:", reply_markup=text_keyboard())
+
+@bot.callback_query_handler(lambda c: c.data == "show_size")
+def cb_show_size(c):
+    bot.answer_callback_query(c.id)
+    safe_edit(c.message.chat.id, c.message.message_id, None)
+    bot.send_message(c.message.chat.id, "Выберите размер шрифта:", reply_markup=size_keyboard())
+
+@bot.callback_query_handler(lambda c: c.data == "show_speed")
+def cb_show_speed(c):
+    bot.answer_callback_query(c.id)
+    safe_edit(c.message.chat.id, c.message.message_id, None)
+    bot.send_message(c.message.chat.id, "Выберите скорость:", reply_markup=speed_keyboard())
+
+@bot.callback_query_handler(lambda c: c.data == "show_dir")
+def cb_show_dir(c):
+    bot.answer_callback_query(c.id)
+    safe_edit(c.message.chat.id, c.message.message_id, None)
+    bot.send_message(c.message.chat.id, "Выберите направление:", reply_markup=dir_keyboard())
+
+@bot.callback_query_handler(lambda c: c.data == "show_bg")
+def cb_show_bg(c):
+    bot.answer_callback_query(c.id)
+    safe_edit(c.message.chat.id, c.message.message_id, None)
+    bot.send_message(c.message.chat.id, "Выберите цвет фона:", reply_markup=bg_keyboard())
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setbg:"))
 def cb_bg(c):
@@ -171,9 +200,6 @@ def handle_text(m):
     waiting_text[m.from_user.id] = False
     bot.reply_to(m, "Текст обновлён!", reply_markup=menu_keyboard())
 
-# ——————————————————————
-# Fallback for simple inline commands
-# ——————————————————————
 @bot.message_handler(func=lambda m: True)
 def fallback(m):
     txt = m.text.strip()
