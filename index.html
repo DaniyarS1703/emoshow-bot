@@ -26,8 +26,7 @@
       position: absolute;
       top: 50%;
       left: 0;
-      right: 0;
-      margin: 0 auto;
+      margin: 0;
       text-align: center;
       white-space: pre-line;
       will-change: transform;
@@ -61,7 +60,6 @@
 
       if (!animate.last) {
         animate.last = timestamp;
-        // Начальная позиция — всегда за правым краем!
         posX = marquee.parentElement.offsetWidth;
         marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
       }
@@ -70,9 +68,12 @@
 
       posX -= speedPxPerSec * elapsed;
       const textWidth = marquee.offsetWidth;
+
+      // Вот здесь строка полностью уходит за край и появляется снова!
       if (posX < -textWidth) {
         posX = marquee.parentElement.offsetWidth;
       }
+
       marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
       animateId = requestAnimationFrame(animate);
     }
@@ -116,20 +117,7 @@
 
     async function fetchData() {
       try {
-        const response = await fetch(API_URL);
+        const response = await fetch(API_URL, {cache: "no-store"});
         if (!response.ok) throw new Error("Ошибка сети");
         const data = await response.json();
-        updateMarquee(data);
-      } catch (error) {
-        console.error("Ошибка при получении данных:", error);
-      }
-    }
-
-    setInterval(fetchData, 5000);
-    fetchData();
-
-    // Запуск начальной анимации при загрузке (режим по умолчанию — бегущая строка)
-    startScroll();
-  </script>
-</body>
-</html>
+        update
