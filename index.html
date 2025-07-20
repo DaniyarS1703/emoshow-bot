@@ -11,6 +11,8 @@
       color: white;
       font-size: 60px;
       user-select: none;
+      width: 100vw;
+      height: 100vh;
       display: flex;
       align-items: center;
       position: relative;
@@ -30,14 +32,13 @@
       word-break: break-word;
       text-align: center;
       will-change: transform;
-      transform: translate(-50%, -50%);
-      left: 50%;
-      top: 50%;
+      left: 0;
+      top: 0;
+      transform: translate(0,0);
     }
     .fixed {
       left: 50% !important;
       top: 50% !important;
-      margin: 0;
       transform: translate(-50%, -50%) !important;
     }
   </style>
@@ -54,7 +55,6 @@
     let lastDirection = "left";
     let animateId = null;
     let lastData = {};
-    // параметры для пинг-понга
     let pingpongActive = false;
     let containerW = 0, containerH = 0, textW = 0, textH = 0;
 
@@ -63,32 +63,29 @@
       if (lastDirection === "pingpong" && !pingpongActive) return;
 
       if (lastDirection === "pingpong") {
-        // обновляем размеры, если изменился текст или размер
+        // Всегда обновляем размеры (актуально при смене текста/размера/развороте)
         containerW = marquee.parentElement.offsetWidth;
         containerH = marquee.parentElement.offsetHeight;
         textW = marquee.offsetWidth;
         textH = marquee.offsetHeight;
 
-        if (!animate.last) {
-          animate.last = timestamp;
-        }
+        if (!animate.last) animate.last = timestamp;
         const elapsed = (timestamp - animate.last) / 1000;
         animate.last = timestamp;
 
         posX += vx * elapsed;
         posY += vy * elapsed;
 
-        // отскок по горизонтали
+        // Чёткое отражение от краёв
         if (posX < 0) { posX = 0; vx = Math.abs(vx); }
         if (posX + textW > containerW) { posX = containerW - textW; vx = -Math.abs(vx); }
-        // отскок по вертикали
         if (posY < 0) { posY = 0; vy = Math.abs(vy); }
         if (posY + textH > containerH) { posY = containerH - textH; vy = -Math.abs(vy); }
 
-        marquee.style.transform = `translate(0, 0) translate(${posX}px, ${posY}px)`;
+        marquee.style.transform = `translate(${posX}px, ${posY}px)`;
         animateId = requestAnimationFrame(animate);
       } else {
-        // классическая бегущая строка
+        // Классическая бегущая строка
         if (!animate.last) {
           animate.last = timestamp;
           posX = marquee.parentElement.offsetWidth;
@@ -114,18 +111,18 @@
       pingpongActive = true;
       animate.last = undefined;
 
-      // начальные размеры
+      // Размеры для расчёта ограничений
       containerW = marquee.parentElement.offsetWidth;
       containerH = marquee.parentElement.offsetHeight;
       textW = marquee.offsetWidth;
       textH = marquee.offsetHeight;
 
-      // старт из центра экрана
-      posX = (containerW - textW) / 2;
-      posY = (containerH - textH) / 2;
+      // Старт из ЛЕВОГО ВЕРХНЕГО угла!
+      posX = 0;
+      posY = 0;
 
-      // угол случайный (20-40°), случайная сторона
-      let angle = (Math.random() < 0.5 ? -1 : 1) * (20 + Math.random() * 20) * Math.PI / 180;
+      // Случайный угол от 20° до 40°, вправо-вниз
+      let angle = (20 + Math.random() * 20) * Math.PI / 180;
       let v = speedPxPerSec;
       vx = Math.cos(angle) * v;
       vy = Math.sin(angle) * v;
