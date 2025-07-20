@@ -25,17 +25,18 @@
     #marquee {
       position: absolute;
       top: 50%;
-      white-space: pre-line; /* Переносы строк */
-      transform: translateY(-50%) translateX(100%);
-      will-change: transform;
       left: 0;
       right: 0;
       margin: 0 auto;
       text-align: center;
+      white-space: pre-line;
+      will-change: transform;
+      transform: translateY(-50%) translateX(100%);
     }
     .fixed {
-      left: 50%;
-      right: auto;
+      left: 50% !important;
+      right: auto !important;
+      margin: 0;
       transform: translate(-50%, -50%) !important;
     }
   </style>
@@ -49,57 +50,48 @@
     const API_URL = "https://emoshow-bot.onrender.com/api/latest?apikey=77777";
     const marquee = document.getElementById("marquee");
 
-    let speedPxPerSec = 100; 
-    let posX; // текущая позиция текста
-    let lastDirection = "left"; // для отслеживания смены режима
+    let speedPxPerSec = 100;
+    let posX;
+    let lastDirection = "left";
 
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
-      if (posX === undefined) {
-        posX = marquee.parentElement.offsetWidth;
-      }
       const elapsed = (timestamp - animate.last) / 1000;
       animate.last = timestamp;
 
-      // Бегущая строка только если НЕ "fixed"
+      // Только если режим не "fixed"
       if (lastDirection !== "fixed") {
+        if (posX === undefined) {
+          posX = marquee.parentElement.offsetWidth;
+        }
         posX -= speedPxPerSec * elapsed;
         const textWidth = marquee.offsetWidth;
         if (posX < -textWidth) {
           posX = marquee.parentElement.offsetWidth;
         }
         marquee.style.transform = `translateY(-50%) translateX(${posX}px)`;
-        marquee.classList.remove("fixed");
-      } else {
-        // Если режим "fixed", останавливаем и центрируем
-        marquee.classList.add("fixed");
       }
-
       requestAnimationFrame(animate);
     }
 
     function updateMarquee(data) {
-      // Сохраняем переносы строк
       marquee.innerHTML = data.text.replace(/\n/g, "<br>");
       marquee.style.color = data.color;
       document.body.style.backgroundColor = data.bg;
       marquee.style.fontSize = data.size + "px";
 
-      // Скорость
       const minSpeedPx = 100;
       const maxSpeedPx = 600;
       let speed = Number(data.speed);
       speed = Math.min(Math.max(speed, 1), 10);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 9;
 
-      // Direction logic
       if (data.direction === "fixed") {
         marquee.classList.add("fixed");
         marquee.style.transform = "translate(-50%, -50%)";
-        posX = undefined;
+        posX = undefined; // сбрасываем позицию
       } else {
         marquee.classList.remove("fixed");
-        // Сбросим posX только если меняется режим
         if (lastDirection !== data.direction) {
           posX = marquee.parentElement.offsetWidth;
         }
@@ -119,10 +111,7 @@
       }
     }
 
-    // Старт анимации
     requestAnimationFrame(animate);
-
-    // Обновляем данные каждые 5 сек
     setInterval(fetchData, 5000);
     fetchData();
 
