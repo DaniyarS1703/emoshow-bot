@@ -6,10 +6,7 @@ import logging
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import telebot
-from telebot.types import (
-    ReplyKeyboardMarkup, KeyboardButton,
-    InlineKeyboardMarkup, InlineKeyboardButton
-)
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot.apihelper import ApiTelegramException
 
 # === Logging ===
@@ -66,14 +63,14 @@ speed_options = [
 ]
 direction_options = [
     ("⬅️ Влево", "left"),
-    ("🖥️ Экран",  "bounce"),
+    ("🖥️ Экран", "bounce"),
     ("🔒 Закрепить", "static")
 ]
 
 # === Keyboards ===
 def menu_keyboard():
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("🎨 Меню"))
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("🎨 Меню", callback_data="show_main_menu"))
     return kb
 
 def bg_keyboard():
@@ -116,7 +113,7 @@ def text_color_keyboard():
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
     return kb
 
 def size_keyboard():
@@ -136,7 +133,7 @@ def size_keyboard():
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
     return kb
 
 def speed_keyboard():
@@ -147,7 +144,7 @@ def speed_keyboard():
             f"{name} {'✅' if val == current else ''}",
             callback_data=f"setspeed:{val}"
         ))
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
     return kb
 
 def direction_keyboard():
@@ -158,7 +155,7 @@ def direction_keyboard():
             f"{name} {'✅' if val == current else ''}",
             callback_data=f"setdirection:{val}"
         ))
-    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="show_main_menu"))
     return kb
 
 # === Handlers ===
@@ -166,21 +163,12 @@ def direction_keyboard():
 def start_message(message):
     bot.send_message(
         message.chat.id,
-        "Добро пожаловать! Управляй бегущей строкой кнопками 🎨 Меню ниже.",
+        "Добро пожаловать! Нажмите кнопку ниже, чтобы открыть меню:",
         reply_markup=menu_keyboard()
     )
 
-# catch both nbsp and normal space
-@bot.message_handler(regexp=r'^🎨[\u00A0 ]*Меню$')
-def show_main_menu(message):
-    bot.send_message(
-        message.chat.id,
-        "Измените цвет фона:",
-        reply_markup=bg_keyboard()
-    )
-
-@bot.callback_query_handler(func=lambda c: c.data == "to_menu")
-def callback_to_menu(call):
+@bot.callback_query_handler(func=lambda c: c.data == "show_main_menu")
+def show_main_menu(call):
     bot.answer_callback_query(call.id)
     bot.edit_message_text(
         "Измените цвет фона:",
@@ -191,7 +179,7 @@ def callback_to_menu(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setbg:"))
 def callback_set_bg(call):
-    color = call.data.split(":",1)[1]
+    color = call.data.split(":", 1)[1]
     latest_command["bg"] = color
     bot.answer_callback_query(call.id, "Фон сменён!")
     bot.edit_message_text(
@@ -209,16 +197,6 @@ def show_text_colors(call):
         call.message.chat.id,
         call.message.message_id,
         reply_markup=text_color_keyboard()
-    )
-
-@bot.callback_query_handler(func=lambda c: c.data == "show_bg")
-def show_bg(call):
-    bot.answer_callback_query(call.id)
-    bot.edit_message_text(
-        "Измените цвет фона:",
-        call.message.chat.id,
-        call.message.message_id,
-        reply_markup=bg_keyboard()
     )
 
 @bot.callback_query_handler(func=lambda c: c.data == "show_sizes")
@@ -253,9 +231,9 @@ def show_direction(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setcolor:"))
 def callback_set_color(call):
-    color = call.data.split(":",1)[1]
+    color = call.data.split(":", 1)[1]
     latest_command["color"] = color
-    bot.answer_callback_query(call.id, f"Цвет текста: {color}")
+    bot.answer_callback_query(call.id, f"Цвет текста обновлён!")
     bot.edit_message_text(
         "Измените цвет текста:",
         call.message.chat.id,
@@ -265,9 +243,9 @@ def callback_set_color(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setsize:"))
 def callback_set_size(call):
-    size = call.data.split(":",1)[1]
+    size = call.data.split(":", 1)[1]
     latest_command["size"] = size
-    bot.answer_callback_query(call.id, f"Размер шрифта: {size}")
+    bot.answer_callback_query(call.id, f"Размер шрифта обновлён!")
     bot.edit_message_text(
         "Измените размер шрифта:",
         call.message.chat.id,
@@ -277,9 +255,9 @@ def callback_set_size(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setspeed:"))
 def callback_set_speed(call):
-    speed = call.data.split(":",1)[1]
+    speed = call.data.split(":", 1)[1]
     latest_command["speed"] = speed
-    bot.answer_callback_query(call.id, f"Скорость: {speed}")
+    bot.answer_callback_query(call.id, f"Скорость обновлена!")
     bot.edit_message_text(
         "Измените скорость:",
         call.message.chat.id,
@@ -289,14 +267,9 @@ def callback_set_speed(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setdirection:"))
 def callback_set_direction(call):
-    mode = call.data.split(":",1)[1]
+    mode = call.data.split(":", 1)[1]
     latest_command["direction"] = mode
-    text = {
-        "left":   "Режим: ⬅️ Классика",
-        "bounce": "Режим: 🖥️ Экран",
-        "static": "Режим: 🔒 Закрепить текст"
-    }[mode]
-    bot.answer_callback_query(call.id, text)
+    bot.answer_callback_query(call.id, "Направление обновлено!")
     bot.edit_message_text(
         "Измените направление:",
         call.message.chat.id,
@@ -307,9 +280,9 @@ def callback_set_direction(call):
 @bot.callback_query_handler(func=lambda c: c.data == "edit_text")
 def callback_edit_text(call):
     waiting_text[call.from_user.id] = True
-    bot.answer_callback_query(call.id, "Введи новый текст")
+    bot.answer_callback_query(call.id, "Введите новый текст")
     bot.edit_message_text(
-        "Отправь новый текст для бегущей строки:",
+        "Отправьте текст:",
         call.message.chat.id,
         call.message.message_id
     )
@@ -342,15 +315,16 @@ def handle_all(message):
         else:
             bot.reply_to(
                 message,
-                "Используй кнопки 🎨 Меню или команды:\n"
+                "Используйте кнопку «🎨 Меню» или команды:\n"
                 "ТЕКСТ: ...\nЦВЕТ: ...\nФОН: ...\nРАЗМЕР: ..."
             )
 
+# === REST API ===
 @app.route('/api/latest', methods=['GET'])
 def api_latest():
     apikey = request.args.get("apikey")
     if apikey != API_KEY:
-        return jsonify({"error": "unauthorized"}), 403
+        return jsonify({"error":"unauthorized"}), 403
     return jsonify(latest_command)
 
 @app.route('/')
@@ -360,17 +334,18 @@ def index():
         'index.html'
     )
 
+# === Polling with 409 filtering ===
 def run_bot():
     while True:
         try:
             bot.polling(none_stop=True, skip_pending=True)
         except ApiTelegramException as e:
-            if "Error code: 409" in str(e):
+            if "409" in str(e):
                 continue
             logger.exception("Polling упал:")
             time.sleep(15)
         except Exception:
-            logger.exception("Unexpected error в polling:")
+            logger.exception("Unexpected error in polling:")
             time.sleep(15)
 
 if __name__ == '__main__':
