@@ -20,31 +20,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # === КОНСТАНТЫ ===
-TELEGRAM_TOKEN = os.environ.get(
-    "TELEGRAM_TOKEN",
-    "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw"
-)
-API_KEY = os.environ.get("API_KEY", "77777")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "<ваш_токен>")
+API_KEY        = os.environ.get("API_KEY",        "77777")
 
 # === ИНИЦИАЛИЗАЦИЯ ===
 app = Flask(__name__)
 CORS(app)
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# Удаляем все вебхуки — чтобы не было конфликта polling vs webhook
-bot.delete_webhook()
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+# Удаляем старый webhook и сбрасываем все обновления,
+# чтобы избежать конфликта “409: terminated by other getUpdates”
+bot.delete_webhook(drop_pending_updates=True)
 
 latest_command = {
-    "text": "Поздравляем с праздником! EMO",
-    "color": "black",
-    "bg": "white",
-    "size": "100",
-    "direction": "left",  # left, bounce или static
-    "speed": "3"
+    "text":      "Поздравляем с праздником! EMO",
+    "color":     "black",
+    "bg":        "white",
+    "size":      "100",
+    "direction": "left",   # left, bounce или static
+    "speed":     "3"
 }
 waiting_text = {}
 
-# Цвета и настройки клавиатуры
 bg_colors = [
     ("⬜", "white"), ("⬛", "black"), ("🟥", "red"), ("🟦", "blue"),
     ("🟩", "green"), ("🟨", "yellow"), ("🟧", "orange"),
@@ -69,7 +66,6 @@ direction_options = [
     ("🔒 Закрепить", "static")
 ]
 
-# === УТИЛИТЫ ===
 def safe_edit_reply_markup(chat_id, message_id, reply_markup):
     try:
         bot.edit_message_reply_markup(
@@ -83,7 +79,6 @@ def safe_edit_reply_markup(chat_id, message_id, reply_markup):
         logger.exception("Ошибка при редактировании клавиатуры")
         raise
 
-# === КЛАВИАТУРЫ ===
 def menu_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("🎨 Меню"))
@@ -160,7 +155,6 @@ def direction_keyboard():
     kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
-# === ОБРАБОТЧИКИ ТЕЛЕБОТА ===
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(
@@ -344,7 +338,6 @@ def handle_all(message):
                 "ТЕКСТ: ...\nЦВЕТ: ...\nФОН: ...\nРАЗМЕР: ..."
             )
 
-# === REST API ===
 @app.route('/api/latest', methods=['GET'])
 def api_latest():
     apikey = request.args.get("apikey")
@@ -354,12 +347,8 @@ def api_latest():
 
 @app.route('/')
 def index():
-    return send_from_directory(
-        os.path.dirname(os.path.abspath(__file__)),
-        'index.html'
-    )
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
-# === Запуск polling в отдельном потоке с перезапуском при ошибках ===
 def run_bot():
     while True:
         try:
