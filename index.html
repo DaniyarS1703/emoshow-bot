@@ -31,7 +31,7 @@
       will-change: transform;
       transition: color 0.2s, background 0.2s;
       pointer-events: none;
-      text-align: left;
+      text-align: center;  /* Центрируем текст для многострочного режима */
     }
   </style>
 </head>
@@ -47,6 +47,7 @@
     let direction = "left";
     let speedPxPerSec = 100;
     let lastDirection = null;
+    let lastConfig = {};
 
     function animate(timestamp) {
       if (!animate.last) animate.last = timestamp;
@@ -79,7 +80,6 @@
       }
 
       else if (direction === "fixed") {
-        // Центрирование — переносы строк учитываем
         marquee.style.position = "absolute";
         marquee.style.top = "50%";
         marquee.style.left = "50%";
@@ -88,7 +88,6 @@
       }
 
       else if (direction === "pingpong") {
-        // Физика для пинг-понга (отскоки)
         if (
           posX === undefined || posY === undefined ||
           lastDirection !== "pingpong"
@@ -98,7 +97,6 @@
           posY = 0;
           // Случайный угол 30..60 градусов (в радианах)
           let angle = (Math.random() * 30 + 30) * Math.PI / 180;
-          // Случайно влево/вправо
           if (Math.random() < 0.5) angle = Math.PI - angle;
           velX = Math.cos(angle) * speedPxPerSec;
           velY = Math.sin(angle) * speedPxPerSec;
@@ -110,10 +108,8 @@
         const cont = marquee.parentElement;
         const mW = marquee.offsetWidth;
         const mH = marquee.offsetHeight;
-        // отскок от левой/правой границы
         if (posX < 0) { posX = 0; velX = -velX; }
         if (posX + mW > cont.offsetWidth) { posX = cont.offsetWidth - mW; velX = -velX; }
-        // отскок от верхней/нижней границы
         if (posY < 0) { posY = 0; velY = -velY; }
         if (posY + mH > cont.offsetHeight) { posY = cont.offsetHeight - mH; velY = -velY; }
         marquee.style.left = posX + "px";
@@ -137,6 +133,21 @@
       speed = Math.min(Math.max(speed, 1), 9);
       speedPxPerSec = minSpeedPx + (speed - 1) * (maxSpeedPx - minSpeedPx) / 8;
 
+      // Сбрасывать позицию только если что-то реально поменялось
+      let needReset = false;
+      if (
+        lastConfig.direction !== direction ||
+        lastConfig.text !== data.text ||
+        lastConfig.size !== data.size
+      ) {
+        needReset = true;
+      }
+      lastConfig = {
+        direction,
+        text: data.text,
+        size: data.size
+      };
+
       if (direction === "fixed") {
         marquee.style.position = "absolute";
         marquee.style.whiteSpace = "pre-line";
@@ -150,9 +161,11 @@
         marquee.style.top = "50%";
       }
 
-      // Сбросить posX/posY если сменился режим
-      lastDirection = null;
-      posX = posY = undefined;
+      // Только если реально что-то поменялось — сбрасываем!
+      if (needReset) {
+        lastDirection = null;
+        posX = posY = undefined;
+      }
     }
 
     async function fetchData() {
