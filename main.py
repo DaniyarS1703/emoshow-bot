@@ -12,38 +12,40 @@ from telebot.types import (
 )
 from telebot.apihelper import ApiTelegramException
 
-# === ЛОГИРОВАНИЕ ===
+# === Logging ===
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# === КОНСТАНТЫ ===
+# === Constants ===
 TELEGRAM_TOKEN = os.environ.get(
     "TELEGRAM_TOKEN",
     "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw"
 )
 API_KEY = os.environ.get("API_KEY", "77777")
 
-# === ИНИЦИАЛИЗАЦИЯ ===
+# === Initialization ===
 app = Flask(__name__)
 CORS(app)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-# Сбрасываем вебхук и накопившиеся обновления, чтобы избежать 409‑й ошибки
+# Remove any webhook and drop pending updates to avoid 409 conflicts
 bot.delete_webhook(drop_pending_updates=True)
 
+# === Global state ===
 latest_command = {
     "text":      "Поздравляем с праздником! EMO",
     "color":     "black",
     "bg":        "white",
     "size":      "100",
-    "direction": "left",
+    "direction": "left",   # left, bounce или static
     "speed":     "3"
 }
 waiting_text = {}
 
+# === Keyboard data ===
 bg_colors = [
     ("⬜", "white"), ("⬛", "black"), ("🟥", "red"),
     ("🟦", "blue"),  ("🟩", "green"), ("🟨", "yellow"),
@@ -56,7 +58,7 @@ text_colors = [
 ]
 sizes = [
     ("100", "100"), ("120", "120"), ("140", "140"), ("160", "160"),
-    ("180", "180"), ("200", "200"), ("220", "220"), ("240", "240"),
+    ("180", "180"), ("200", "200"), ("220", "220"), ("240", "240")
 ]
 speed_options = [
     ("🐢 1", "1"), ("2", "2"), ("3", "3"), ("4", "4"), ("5", "5"),
@@ -68,19 +70,7 @@ direction_options = [
     ("🔒 Закрепить", "static")
 ]
 
-def safe_edit_reply_markup(chat_id, message_id, reply_markup):
-    try:
-        bot.edit_message_reply_markup(
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=reply_markup
-        )
-    except ApiTelegramException as e:
-        if "message is not modified" in str(e):
-            return
-        logger.exception("Ошибка при редактировании клавиатуры")
-        raise
-
+# === Keyboards ===
 def menu_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("🎨 Меню"))
@@ -89,7 +79,6 @@ def menu_keyboard():
 def bg_keyboard():
     current = latest_command["bg"]
     kb = InlineKeyboardMarkup()
-    # Кнопки выбора фона, по 3 в ряд
     buttons = [
         InlineKeyboardButton(
             f"{emoji} {'✅' if color == current else ''}",
@@ -99,7 +88,6 @@ def bg_keyboard():
     ]
     for i in range(0, len(buttons), 3):
         kb.row(*buttons[i:i+3])
-    # Дополнительные опции
     kb.row(
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes")
@@ -115,58 +103,65 @@ def text_color_keyboard():
     current = latest_command["color"]
     kb = InlineKeyboardMarkup(row_width=3)
     for emoji, color in text_colors:
-        label = f"{emoji} {'✅' if color == current else ''}"
-        kb.add(InlineKeyboardButton(label, callback_data=f"setcolor:{color}"))
-    kb.add(
+        kb.add(InlineKeyboardButton(
+            f"{emoji} {'✅' if color == current else ''}",
+            callback_data=f"setcolor:{color}"
+        ))
+    kb.row(
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
         InlineKeyboardButton("Размер шрифта", callback_data="show_sizes")
     )
-    kb.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    kb.add(
+    kb.row(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
+    kb.row(
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
 def size_keyboard():
     current = latest_command["size"]
     kb = InlineKeyboardMarkup(row_width=2)
     for name, val in sizes:
-        label = f"{name} {'✅' if val == current else ''}"
-        kb.add(InlineKeyboardButton(label, callback_data=f"setsize:{val}"))
-    kb.add(
+        kb.add(InlineKeyboardButton(
+            f"{name} {'✅' if val == current else ''}",
+            callback_data=f"setsize:{val}"
+        ))
+    kb.row(
         InlineKeyboardButton("Цвет фона", callback_data="show_bg"),
         InlineKeyboardButton("Цвет текста", callback_data="show_text_colors")
     )
-    kb.add(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
-    kb.add(
+    kb.row(InlineKeyboardButton("Изменить текст", callback_data="edit_text"))
+    kb.row(
         InlineKeyboardButton("Скорость", callback_data="show_speed"),
         InlineKeyboardButton("Направление", callback_data="show_direction")
     )
-    kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
 def speed_keyboard():
     current = latest_command["speed"]
     kb = InlineKeyboardMarkup(row_width=5)
     for name, val in speed_options:
-        label = f"{name} {'✅' if val == current else ''}"
-        kb.add(InlineKeyboardButton(label, callback_data=f"setspeed:{val}"))
-    kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+        kb.add(InlineKeyboardButton(
+            f"{name} {'✅' if val == current else ''}",
+            callback_data=f"setspeed:{val}"
+        ))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
 def direction_keyboard():
     current = latest_command["direction"]
     kb = InlineKeyboardMarkup(row_width=3)
     for name, val in direction_options:
-        label = f"{name} {'✅' if val == current else ''}"
-        kb.add(InlineKeyboardButton(label, callback_data=f"setdirection:{val}"))
-    kb.add(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
+        kb.add(InlineKeyboardButton(
+            f"{name} {'✅' if val == current else ''}",
+            callback_data=f"setdirection:{val}"
+        ))
+    kb.row(InlineKeyboardButton("◀️ Меню", callback_data="to_menu"))
     return kb
 
-# === ХЕНДЛЕРЫ ===
-
+# === Handlers ===
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(
@@ -175,7 +170,8 @@ def start_message(message):
         reply_markup=menu_keyboard()
     )
 
-@bot.message_handler(func=lambda m: m.text and m.text.replace('\u00A0',' ') == "🎨 Меню")
+# catch both nbsp and normal space
+@bot.message_handler(regexp=r'^🎨[\u00A0 ]*Меню$')
 def show_main_menu(message):
     bot.send_message(
         message.chat.id,
@@ -195,7 +191,7 @@ def callback_to_menu(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setbg:"))
 def callback_set_bg(call):
-    color = call.data.split(":", 1)[1]
+    color = call.data.split(":",1)[1]
     latest_command["bg"] = color
     bot.answer_callback_query(call.id, "Фон сменён!")
     bot.edit_message_text(
@@ -257,7 +253,7 @@ def show_direction(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setcolor:"))
 def callback_set_color(call):
-    color = call.data.split(":", 1)[1]
+    color = call.data.split(":",1)[1]
     latest_command["color"] = color
     bot.answer_callback_query(call.id, f"Цвет текста: {color}")
     bot.edit_message_text(
@@ -269,7 +265,7 @@ def callback_set_color(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setsize:"))
 def callback_set_size(call):
-    size = call.data.split(":", 1)[1]
+    size = call.data.split(":",1)[1]
     latest_command["size"] = size
     bot.answer_callback_query(call.id, f"Размер шрифта: {size}")
     bot.edit_message_text(
@@ -281,7 +277,7 @@ def callback_set_size(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setspeed:"))
 def callback_set_speed(call):
-    speed = call.data.split(":", 1)[1]
+    speed = call.data.split(":",1)[1]
     latest_command["speed"] = speed
     bot.answer_callback_query(call.id, f"Скорость: {speed}")
     bot.edit_message_text(
@@ -293,7 +289,7 @@ def callback_set_speed(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("setdirection:"))
 def callback_set_direction(call):
-    mode = call.data.split(":", 1)[1]
+    mode = call.data.split(":",1)[1]
     latest_command["direction"] = mode
     text = {
         "left":   "Режим: ⬅️ Классика",
