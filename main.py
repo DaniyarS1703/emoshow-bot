@@ -2,8 +2,7 @@ import threading
 from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-from telebot.apihelper import ApiTelegramException
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 # ——————————————————————
 # Configuration
@@ -36,16 +35,17 @@ waiting_text = {}
 # ——————————————————————
 # Keyboards
 # ——————————————————————
-def start_keyboard():
-    kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("📋 Открыть меню", callback_data="show_menu"))
+def menu_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
+    kb.add(KeyboardButton("Меню"))
     return kb
 
 def bg_keyboard():
-    colors = [("⬜","white"),("⬛","black"),("🟥","red"),
-              ("🟦","blue"),("🟩","green"),("🟨","yellow")]
     kb = InlineKeyboardMarkup(row_width=3)
-    for emoji, val in colors:
+    for emoji, val in [
+        ("⬜","white"),("⬛","black"),("🟥","red"),
+        ("🟦","blue"),("🟩","green"),("🟨","yellow")
+    ]:
         kb.add(InlineKeyboardButton(emoji, callback_data=f"setbg:{val}"))
     kb.add(
         InlineKeyboardButton("🎨 Цвет текста", callback_data="show_text"),
@@ -59,50 +59,31 @@ def bg_keyboard():
     return kb
 
 def text_keyboard():
-    colors = [("⬜","white"),("⬛","black"),("🟥","red"),
-              ("🟦","blue"),("🟩","green"),("🟨","yellow")]
     kb = InlineKeyboardMarkup(row_width=3)
-    for emoji, val in colors:
+    for emoji, val in [
+        ("⬜","white"),("⬛","black"),("🟥","red"),
+        ("🟦","blue"),("🟩","green"),("🟨","yellow")
+    ]:
         kb.add(InlineKeyboardButton(emoji, callback_data=f"setcolor:{val}"))
-    kb.add(
-        InlineKeyboardButton("🎨 Цвет фона", callback_data="show_bg"),
-        InlineKeyboardButton("🔠 Размер шрифта", callback_data="show_size")
-    )
-    kb.add(InlineKeyboardButton("✏️ Изменить текст", callback_data="edit_text"))
     return kb
 
 def size_keyboard():
-    sizes = [("60","60"),("80","80"),("100","100"),("120","120")]
     kb = InlineKeyboardMarkup(row_width=2)
-    for name, val in sizes:
+    for name, val in [("60","60"),("80","80"),("100","100"),("120","120")]:
         kb.add(InlineKeyboardButton(name, callback_data=f"setsize:{val}"))
-    kb.add(
-        InlineKeyboardButton("🎨 Цвет фона", callback_data="show_bg"),
-        InlineKeyboardButton("🎨 Цвет текста", callback_data="show_text")
-    )
     return kb
 
 def speed_keyboard():
-    speeds = [("🐢1","1"),("2","2"),("3","3"),("4","4"),("⚡️5","5")]
     kb = InlineKeyboardMarkup(row_width=3)
-    for name, val in speeds:
+    for name, val in [("🐢1","1"),("2","2"),("3","3"),("4","4"),("⚡️5","5")]:
         kb.add(InlineKeyboardButton(name, callback_data=f"setspeed:{val}"))
     return kb
 
 def dir_keyboard():
-    dirs = [("⬅️","left"),("➡️","right")]
     kb = InlineKeyboardMarkup(row_width=2)
-    for name, val in dirs:
+    for name, val in [("⬅️","left"),("➡️","right")]:
         kb.add(InlineKeyboardButton(name, callback_data=f"setdir:{val}"))
     return kb
-
-def safe_edit(chat_id, msg_id, markup):
-    try:
-        bot.edit_message_reply_markup(chat_id, msg_id, reply_markup=markup)
-    except ApiTelegramException as e:
-        if "message is not modified" in str(e):
-            return
-        raise
 
 # ——————————————————————
 # Bot Handlers
@@ -111,93 +92,106 @@ def safe_edit(chat_id, msg_id, markup):
 def on_start(msg):
     bot.send_message(
         msg.chat.id,
-        "Добро пожаловать! Нажмите кнопку ниже, чтобы открыть меню управления:",
-        reply_markup=start_keyboard()
+        "Добро пожаловать! Нажмите «Меню» для настроек.",
+        reply_markup=menu_keyboard()
     )
 
-@bot.callback_query_handler(lambda c: c.data == "show_menu")
-def cb_show_menu(c):
-    bot.answer_callback_query(c.id)
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Выберите настройку:", reply_markup=bg_keyboard())
+@bot.message_handler(func=lambda m: m.text == "Меню")
+def show_menu(msg):
+    bot.send_message(
+        msg.chat.id,
+        "Выберите настройку:",
+        reply_markup=bg_keyboard()
+    )
 
 @bot.callback_query_handler(lambda c: c.data == "show_text")
 def cb_show_text(c):
     bot.answer_callback_query(c.id)
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Выберите цвет текста:", reply_markup=text_keyboard())
+    bot.send_message(
+        c.message.chat.id,
+        "Выберите цвет текста:",
+        reply_markup=text_keyboard()
+    )
 
 @bot.callback_query_handler(lambda c: c.data == "show_size")
 def cb_show_size(c):
     bot.answer_callback_query(c.id)
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Выберите размер шрифта:", reply_markup=size_keyboard())
+    bot.send_message(
+        c.message.chat.id,
+        "Выберите размер шрифта:",
+        reply_markup=size_keyboard()
+    )
 
 @bot.callback_query_handler(lambda c: c.data == "show_speed")
 def cb_show_speed(c):
     bot.answer_callback_query(c.id)
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Выберите скорость:", reply_markup=speed_keyboard())
+    bot.send_message(
+        c.message.chat.id,
+        "Выберите скорость:",
+        reply_markup=speed_keyboard()
+    )
 
 @bot.callback_query_handler(lambda c: c.data == "show_dir")
 def cb_show_dir(c):
     bot.answer_callback_query(c.id)
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Выберите направление:", reply_markup=dir_keyboard())
+    bot.send_message(
+        c.message.chat.id,
+        "Выберите направление:",
+        reply_markup=dir_keyboard()
+    )
 
 @bot.callback_query_handler(lambda c: c.data == "show_bg")
 def cb_show_bg(c):
     bot.answer_callback_query(c.id)
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Выберите цвет фона:", reply_markup=bg_keyboard())
+    bot.send_message(
+        c.message.chat.id,
+        "Выберите цвет фона:",
+        reply_markup=bg_keyboard()
+    )
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setbg:"))
-def cb_bg(c):
+def cb_set_bg(c):
     latest_command["bg"] = c.data.split(":",1)[1]
-    bot.answer_callback_query(c.id, "Фон установлен")
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Фон обновлён!", reply_markup=start_keyboard())
+    bot.answer_callback_query(c.id, "Фон обновлён!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setcolor:"))
-def cb_color(c):
+def cb_set_color(c):
     latest_command["color"] = c.data.split(":",1)[1]
-    bot.answer_callback_query(c.id, "Цвет текста установлен")
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Цвет текста обновлён!", reply_markup=start_keyboard())
+    bot.answer_callback_query(c.id, "Цвет текста обновлён!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setsize:"))
-def cb_size(c):
+def cb_set_size(c):
     latest_command["size"] = c.data.split(":",1)[1]
-    bot.answer_callback_query(c.id, "Размер установлен")
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Размер шрифта обновлён!", reply_markup=start_keyboard())
+    bot.answer_callback_query(c.id, "Размер шрифта обновлён!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setspeed:"))
-def cb_speed(c):
+def cb_set_speed(c):
     latest_command["speed"] = c.data.split(":",1)[1]
-    bot.answer_callback_query(c.id, "Скорость установлена")
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Скорость обновлена!", reply_markup=start_keyboard())
+    bot.answer_callback_query(c.id, "Скорость обновлена!")
 
 @bot.callback_query_handler(lambda c: c.data.startswith("setdir:"))
-def cb_dir(c):
+def cb_set_dir(c):
     latest_command["direction"] = c.data.split(":",1)[1]
-    bot.answer_callback_query(c.id, "Направление установлено")
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Направление обновлено!", reply_markup=start_keyboard())
+    bot.answer_callback_query(c.id, "Направление обновлено!")
 
 @bot.callback_query_handler(lambda c: c.data == "edit_text")
 def cb_edit_text(c):
     waiting_text[c.from_user.id] = True
-    bot.answer_callback_query(c.id, "Напиши новый текст")
-    safe_edit(c.message.chat.id, c.message.message_id, None)
-    bot.send_message(c.message.chat.id, "Отправь новый текст:")
+    bot.answer_callback_query(c.id, "Введите новый текст")
+    bot.send_message(
+        c.message.chat.id,
+        "Отправьте новый текст для бегущей строки:"
+    )
 
 @bot.message_handler(func=lambda m: waiting_text.get(m.from_user.id, False))
-def handle_text(m):
-    latest_command["text"] = m.text
+def handle_new_text(m):
+    latest_command["text"] = m.text.strip()
     waiting_text[m.from_user.id] = False
-    bot.reply_to(m, "Текст обновлён!", reply_markup=start_keyboard())
+    bot.reply_to(
+        m,
+        "Текст обновлён!",
+        reply_markup=menu_keyboard()
+    )
 
 @bot.message_handler(func=lambda m: True)
 def fallback(m):
@@ -205,24 +199,25 @@ def fallback(m):
     up = txt.upper()
     if up.startswith("ТЕКСТ:"):
         latest_command["text"] = txt[6:].strip()
-        bot.reply_to(m, "Текст обновлён!", reply_markup=start_keyboard())
+        bot.reply_to(m, "Текст обновлён!", reply_markup=menu_keyboard())
     elif up.startswith("ФОН:"):
         latest_command["bg"] = txt[4:].strip()
-        bot.reply_to(m, "Фон обновлён!", reply_markup=start_keyboard())
+        bot.reply_to(m, "Фон обновлён!", reply_markup=menu_keyboard())
     elif up.startswith("ЦВЕТ:"):
         latest_command["color"] = txt[5:].strip()
-        bot.reply_to(m, "Цвет текста обновлён!", reply_markup=start_keyboard())
+        bot.reply_to(m, "Цвет текста обновлён!", reply_markup=menu_keyboard())
     elif up.startswith("РАЗМЕР:"):
         try:
             latest_command["size"] = str(int(txt[7:].strip()))
-            bot.reply_to(m, "Размер шрифта обновлён!", reply_markup=start_keyboard())
+            bot.reply_to(m, "Размер шрифта обновлён!", reply_markup=menu_keyboard())
         except:
-            bot.reply_to(m, "Ошибка: размер должен быть числом", reply_markup=start_keyboard())
+            bot.reply_to(m, "Ошибка: размер должен быть числом.", reply_markup=menu_keyboard())
     else:
         bot.reply_to(
             m,
-            "Используйте кнопку меню или команды: ТЕКСТ: ..., ФОН: ..., ЦВЕТ: ..., РАЗМЕР: ...",
-            reply_markup=start_keyboard()
+            "Используйте кнопку «Меню» или команды:\n"
+            "ТЕКСТ: ..., ФОН: ..., ЦВЕТ: ..., РАЗМЕР: ...",
+            reply_markup=menu_keyboard()
         )
 
 # ——————————————————————
