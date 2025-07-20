@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # === КОНСТАНТЫ ===
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "<ваш_токен>")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "7377508266:AAHv1EKkXgP3AjVbcJHnaf505N-37HELKQw")
 API_KEY        = os.environ.get("API_KEY",        "77777")
 
 # === ИНИЦИАЛИЗАЦИЯ ===
